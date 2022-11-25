@@ -1,5 +1,5 @@
 import type { Server } from "@prisma/client";
-import type { FC } from "react";
+import type { Dispatch, FC, SetStateAction } from "react";
 import { useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
 import ServerListItem from "./ServerListItem";
@@ -9,11 +9,15 @@ import ModalInput from "./modal/ModalInput";
 
 type Props = {
   servers: Server[];
+  createServerModalOpen: boolean;
+  setCreateServerModalOpen: Dispatch<SetStateAction<boolean>>;
 };
 
-const ServerList: FC<Props> = ({ servers }) => {
-  const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
-
+const ServerList: FC<Props> = ({
+  servers,
+  createServerModalOpen,
+  setCreateServerModalOpen,
+}) => {
   return (
     <>
       <div className={styles.wrapper}>

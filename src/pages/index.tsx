@@ -56,9 +56,18 @@ const Index: NextPage = () => {
       utils.server.getServers.invalidate();
     },
   });
+  const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
   return (
-    <div>
-      <ServerList servers={server ?? []} />
+    <div
+      onClick={() => {
+        if (createServerModalOpen) setCreateServerModalOpen(false);
+      }}
+    >
+      <ServerList
+        createServerModalOpen={createServerModalOpen}
+        setCreateServerModalOpen={setCreateServerModalOpen}
+        servers={server ?? []}
+      />
       <div className={styles.servers}></div>
       <form>
         <input ref={nameRef} />
