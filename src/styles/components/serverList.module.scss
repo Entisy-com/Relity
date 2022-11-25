@@ -6,9 +6,11 @@
   bottom: 0;
   gap: 5px;
   background-color: rgba(0, 0, 0, 0.8);
+  overflow-x: auto;
 }
 
 .add_server {
+  margin-right: 10px;
   display: flex;
   justify-content: center;
   align-items: center;

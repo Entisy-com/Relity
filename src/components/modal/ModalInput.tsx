@@ -10,6 +10,7 @@ type Props = {
 const ModalInput: FC<Props> = ({ rref, type, placeholder }) => {
   return (
     <input
+      autoFocus
       ref={rref}
       placeholder={placeholder}
       className={styles.input}

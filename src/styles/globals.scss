@@ -30,3 +30,12 @@ body {
   background-image: url("/background.svg");
   background-size: cover;
 }
+
+::-webkit-scrollbar {
+  height: 4px;
+  background-color: #252525;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #828282;
+}

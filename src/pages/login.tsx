@@ -6,6 +6,9 @@ import type { ClientSafeProvider, LiteralUnion } from "next-auth/react/types";
 import type { BuiltInProviderType } from "next-auth/providers";
 import { useEffect } from "react";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
+import Modal from "../components/modal/Modal";
+import ModalButton from "../components/modal/ModalButton";
+import ModalTitle from "../components/modal/ModalTitle";
 
 type Props = {
   providers: Record<
@@ -16,30 +19,31 @@ type Props = {
 
 const Login: NextPage<Props> = ({ providers }) => {
   const { data: sessionData } = useSession();
+
   useEffect(() => {
     if (sessionData) window.location.href = "/";
   }, [sessionData]);
+
   return (
     <div className={styles.wrapper}>
       <Link href="..">
         <p className={styles.back}>Back</p>
       </Link>
-      <div className={styles.container}>
-        <form className={styles.form}>
-          <h1 className={styles.title}>Login</h1>
-          {providers
-            ? Object.values(providers).map((provider) => (
-                <div
-                  onClick={() => signIn(provider.id)}
-                  className={styles.component}
+      <Modal open={true} setOpen={() => {}}>
+        <>
+          <ModalTitle value="Login" />
+          {providers! &&
+            Object.values(providers).map((provider) => {
+              return (
+                <ModalButton
+                  value={provider.name}
                   key={provider.id}
-                >
-                  {provider.name}
-                </div>
-              ))
-            : null}
-        </form>
-      </div>
+                  onClick={() => signIn(provider.id)}
+                />
+              );
+            })}
+        </>
+      </Modal>
     </div>
   );
 };
