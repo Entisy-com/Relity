@@ -1,10 +1,13 @@
 -- CreateEnum
 CREATE TYPE "Permission" AS ENUM ('READ', 'SEND_MESSAGES', 'KICK', 'BAN', 'MANAGE_MESSAGES');
 
+-- CreateEnum
+CREATE TYPE "OnlineStatus" AS ENUM ('ONLINE', 'AWAY', 'DND', 'OFFLINE');
+
 -- CreateTable
 CREATE TABLE "AdminUser" (
-    "id" SERIAL NOT NULL,
-    "userid" INTEGER NOT NULL,
+    "id" TEXT NOT NULL,
+    "userid" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -13,9 +16,9 @@ CREATE TABLE "AdminUser" (
 
 -- CreateTable
 CREATE TABLE "TextChannel" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "serverid" INTEGER NOT NULL,
+    "serverid" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -24,24 +27,24 @@ CREATE TABLE "TextChannel" (
 
 -- CreateTable
 CREATE TABLE "Message" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
-    "authorId" INTEGER NOT NULL,
-    "color" TEXT NOT NULL,
-    "backgroundColor" TEXT NOT NULL,
+    "authorId" TEXT NOT NULL,
+    "color" TEXT DEFAULT '#fff',
+    "backgroundColor" TEXT DEFAULT '#00000000',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "textChannelId" INTEGER,
+    "textChannelId" TEXT,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Role" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "permissions" "Permission"[],
-    "serverid" INTEGER NOT NULL,
+    "serverid" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -50,9 +53,9 @@ CREATE TABLE "Role" (
 
 -- CreateTable
 CREATE TABLE "Server" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "ownerid" INTEGER NOT NULL,
+    "ownerid" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "pfp" TEXT,
@@ -63,8 +66,8 @@ CREATE TABLE "Server" (
 
 -- CreateTable
 CREATE TABLE "Account" (
-    "id" SERIAL NOT NULL,
-    "userId" INTEGER NOT NULL,
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
     "providerAccountId" TEXT NOT NULL,
@@ -83,9 +86,9 @@ CREATE TABLE "Account" (
 
 -- CreateTable
 CREATE TABLE "Session" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "sessionToken" TEXT NOT NULL,
-    "userId" INTEGER NOT NULL,
+    "userId" TEXT NOT NULL,
     "expires" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
@@ -93,11 +96,12 @@ CREATE TABLE "Session" (
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "name" TEXT,
     "email" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
+    "status" "OnlineStatus",
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -113,26 +117,32 @@ CREATE TABLE "VerificationToken" (
 
 -- CreateTable
 CREATE TABLE "_MessageToRole" (
-    "A" INTEGER NOT NULL,
-    "B" INTEGER NOT NULL
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "_mentions" (
-    "A" INTEGER NOT NULL,
-    "B" INTEGER NOT NULL
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "_RoleToUser" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "_users" (
-    "A" INTEGER NOT NULL,
-    "B" INTEGER NOT NULL
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "_bannedusers" (
-    "A" INTEGER NOT NULL,
-    "B" INTEGER NOT NULL
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
 );
 
 -- CreateIndex
@@ -170,6 +180,12 @@ CREATE UNIQUE INDEX "_mentions_AB_unique" ON "_mentions"("A", "B");
 
 -- CreateIndex
 CREATE INDEX "_mentions_B_index" ON "_mentions"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_RoleToUser_AB_unique" ON "_RoleToUser"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_RoleToUser_B_index" ON "_RoleToUser"("B");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "_users_AB_unique" ON "_users"("A", "B");
@@ -218,6 +234,12 @@ ALTER TABLE "_mentions" ADD CONSTRAINT "_mentions_A_fkey" FOREIGN KEY ("A") REFE
 
 -- AddForeignKey
 ALTER TABLE "_mentions" ADD CONSTRAINT "_mentions_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_users" ADD CONSTRAINT "_users_A_fkey" FOREIGN KEY ("A") REFERENCES "Server"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -1,5 +1,6 @@
 import { Server, TextChannel } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
+import Profile from "../../components/Profile";
 import ServerList from "../../components/ServerList";
 import isChannelAThing from "../api/v1/getChannel";
 import isServerAThing from "../api/v1/getServer";
@@ -12,6 +13,7 @@ type Props = {
 const ChannelPage: NextPage<Props> = ({ server, channel }) => {
   return (
     <>
+      <Profile />
       <ServerList />
     </>
   );

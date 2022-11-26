@@ -53,6 +53,7 @@ model Role {
   permissions Permission[]
   server      Server       @relation(fields: [serverid], references: [id])
   serverid    String       @unique
+  users       User[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   mentionedIn Message[]
@@ -126,6 +127,7 @@ model User {
   server        Server[]      @relation(name: "users")
   bannedon      Server[]      @relation(name: "bannedusers")
   ownerof       Server[]
+  roles         Role[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
