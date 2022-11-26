@@ -7,6 +7,9 @@
   gap: 5px;
   background-color: rgba(0, 0, 0, 0.8);
   overflow-x: auto;
+  & > *:first-child {
+    margin-left: 45px;
+  }
 }
 
 .add_server {

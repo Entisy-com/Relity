@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Message" ALTER COLUMN "color" DROP NOT NULL,
+ALTER COLUMN "color" SET DEFAULT '#fff',
+ALTER COLUMN "backgroundColor" DROP NOT NULL,
+ALTER COLUMN "backgroundColor" SET DEFAULT '#00000000';

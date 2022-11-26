@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { useEffect } from "react";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {
@@ -8,17 +7,45 @@ type Props = {
   setOpen: Function;
   children?: JSX.Element | JSX.Element[];
   ref?: any;
+  closable?: boolean;
+  blur?: boolean;
+  darken?: boolean | string;
 };
 
-const Modal: FC<Props> = ({ ref, open, setOpen, children }) => {
+const Modal: FC<Props> = ({
+  ref,
+  open,
+  setOpen,
+  children,
+  closable,
+  blur,
+  darken,
+}) => {
   return (
     <>
       {open && (
-        <div className={styles.wrapper}>
-          <form ref={ref} method="dialog" className={`${styles.modal} modal`}>
-            {children}
-          </form>
-        </div>
+        <form
+          ref={ref}
+          method="dialog"
+          className={`${styles.modal} ${blur && styles.blur} ${
+            darken && styles.darken
+          }`}
+          style={{
+            backgroundColor: `rgba(0, 0, 0, 0.${darken})`,
+          }}
+        >
+          {closable && (
+            <img
+              onClick={() => setOpen(false)}
+              className={styles.close_button}
+              src="/cross.svg"
+              alt=""
+              width={20}
+              height={20}
+            />
+          )}
+          {children}
+        </form>
       )}
     </>
   );

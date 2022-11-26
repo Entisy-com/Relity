@@ -10,20 +10,49 @@
   top: 50%;
   left: 50%;
   translate: -50% -50%;
+}
+
+.blur {
+  backdrop-filter: blur(5px);
+}
+
+.darken {
   background-color: rgba(0, 0, 0, 0.25);
 }
 
+.close_button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+  filter: invert(90%) sepia(56%) saturate(0%) hue-rotate(74deg) brightness(108%)
+    contrast(101%);
+}
+
 .input {
+  display: flex;
+  width: 300px;
+  border-radius: 4px;
+  margin-inline: 40px;
+  margin-block: 4px;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.input_field {
   outline: none;
   border: none;
   color: white;
   font-size: 18px;
   width: 300px;
-  border-radius: 4px;
-  margin-inline: 40px;
-  margin-block: 4px;
   padding: 4px;
-  background-color: rgba(0, 0, 0, 0.25);
+  background: transparent;
+}
+
+.toggle_password {
+  position: relative;
+  translate: 0 25%;
+  right: 5px;
+  cursor: pointer;
 }
 
 .title {
@@ -42,7 +71,7 @@
   border: none;
   color: white;
   font-size: 18px;
-  width: 300px;
+  width: 292px;
   border-radius: 4px;
   margin-inline: 40px;
   margin-block: 4px;
@@ -55,22 +84,20 @@
   }
 }
 
-.list,
-.list_item {
+.list {
+  margin-left: 35%;
+  display: flex;
   color: white;
   font-size: 18px;
   margin-block: 4px;
   padding: 4px;
   margin-bottom: 12px;
-  background-color: rgba(0, 0, 0, 0.25);
 }
 
 .text {
   color: white;
-  font-size: 18px;
-  margin-block: 4px;
+  font-size: 16px;
   padding: 4px;
-  margin-bottom: 12px;
   text-align: center;
 }
 

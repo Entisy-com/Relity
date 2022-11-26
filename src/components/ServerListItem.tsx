@@ -1,4 +1,5 @@
-import type { Server } from "@prisma/client";
+import { Role, Server, TextChannel, User } from "@prisma/client";
+import Link from "next/link";
 import type { FC } from "react";
 import styles from "../styles/components/serverItem.module.scss";
 
@@ -7,7 +8,11 @@ type Props = {
 };
 
 const ServerListItem: FC<Props> = ({ server }) => {
-  return <div className={styles.wrapper}>{server.name.substring(0, 2)}</div>;
+  return (
+    <a href={`/${server.id}`} className={styles.wrapper} rel="noreferrer">
+      {server.name.substring(0, 2)}
+    </a>
+  );
 };
 
 export default ServerListItem;

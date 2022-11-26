@@ -37,8 +37,8 @@ model Message {
   content         String
   author          User         @relation(fields: [authorId], references: [id])
   authorId        String
-  color           String
-  backgroundColor String
+  color           String?      @default("#fff")
+  backgroundColor String?      @default("#00000000")
   mentionedRoles  Role[]
   mentionedUser   User[]       @relation(name: "mentions")
   createdAt       DateTime     @default(now())
@@ -112,21 +112,22 @@ model Session {
 }
 
 model User {
-  id            String     @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String?    @unique
+  email         String?       @unique
   emailVerified DateTime?
   image         String?
+  status        OnlineStatus?
   accounts      Account[]
   sessions      Session[]
   AdminUser     AdminUser?
   messages      Message[]
-  mentionedin   Message[]  @relation(name: "mentions")
-  server        Server[]   @relation(name: "users")
-  bannedon      Server[]   @relation(name: "bannedusers")
+  mentionedin   Message[]     @relation(name: "mentions")
+  server        Server[]      @relation(name: "users")
+  bannedon      Server[]      @relation(name: "bannedusers")
   ownerof       Server[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model VerificationToken {
@@ -135,4 +136,11 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum OnlineStatus {
+  ONLINE
+  AWAY
+  DND
+  OFFLINE
 }

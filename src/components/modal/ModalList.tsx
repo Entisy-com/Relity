@@ -5,25 +5,20 @@ type Props = {
   children?: JSX.Element | JSX.Element[];
   type?: string;
   value?: string;
-  ref?: any;
+  ordered?: boolean;
+  rref?: string;
 };
 
-const ModalList: FC<Props> = ({ ref, value, type, children }) => {
+const ModalList: FC<Props> = ({ rref, value, ordered, children }) => {
   return (
     <>
       {value}
-      {type === "ordered" && (
-        <ol ref={ref} className={styles.list}>
+      {ordered ? (
+        <ol ref={rref} className={styles.list}>
           {children}
         </ol>
-      )}
-      {type === "unordered" && (
-        <ul ref={ref} className={styles.list}>
-          {children}
-        </ul>
-      )}
-      {type === "" && (
-        <ul ref={ref} className={styles.list}>
+      ) : (
+        <ul ref={rref} className={styles.list}>
           {children}
         </ul>
       )}

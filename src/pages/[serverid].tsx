@@ -1,40 +1,38 @@
-import { Server } from "@prisma/client";
+import { Role, Server, TextChannel, User } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
 import { useEffect, useState } from "react";
+import ServerList from "../components/ServerList";
 import { trpc } from "../utils/trpc";
-import Router from "next/router";
+import isServerAThing from "./api/v1/getServer";
 
 type Props = {
-  params: {
-    serverid: string;
-  };
+  server: Server;
 };
 
-const ServerPage: NextPage<Props> = ({ params }) => {
-  const [server, setServer] = useState<Server>();
-  useEffect(() => {
-    const server = trpc.server.getServerById.useQuery({
-      id: params.serverid,
-    });
-    if (!server.data) {
-      Router.push("/");
-    } else {
-      setServer(server.data);
-    }
-  }, [params.serverid]);
+const ServerPage: NextPage<Props> = ({ server }) => {
+  const { data: allData } = trpc.server.getServerById.useQuery({
+    id: server.id,
+  });
+  if (!allData) return <></>;
   return (
     <>
-      <>{server && server.name}</>
+      <>
+        {allData.name}
+        <ServerList />
+      </>
     </>
   );
 };
 
 export default ServerPage;
 
-export function getServerSideProps(ctx: GetServerSidePropsContext) {
-  const server = trpc.server.getServerById.useQuery({
-    id: ctx.params!.serverid!.toString(),
-  });
-  if (!server) return { redirect: { destination: "/", persistent: false } };
-  return { props: { server } };
+export async function getServerSideProps(ctx: GetServerSidePropsContext) {
+  const server = await isServerAThing(ctx.req, ctx.res);
+  return server
+    ? {
+        props: {
+          server: JSON.parse(JSON.stringify(server)),
+        },
+      }
+    : { redirect: { destination: "/", persistent: false } };
 }

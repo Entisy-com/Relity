@@ -46,6 +46,13 @@ export const serverRouter = router({
         where: {
           id: input.id,
         },
+        include: {
+          users: true,
+          bannedUser: true,
+          owner: true,
+          roles: true,
+          textchannel: true,
+        },
       });
       return server;
     }),

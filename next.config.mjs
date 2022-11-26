@@ -13,5 +13,15 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
+  images: {
+    domains: [
+      "cdn.discordapp.com",
+      "avatars.githubusercontent.com",
+      "i.scdn.co",
+      "lh3.googleusercontent.com",
+      "cdn.kimuna.de",
+      "localhost:4000",
+    ],
+  },
 };
 export default config;
