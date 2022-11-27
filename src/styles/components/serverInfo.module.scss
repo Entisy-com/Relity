@@ -1,0 +1,16 @@
+.wrapper {
+  height: calc(100% - 50px);
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 400px;
+  right: 0;
+  position: absolute;
+}
+
+.server_name {
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  left: 10px;
+  font-size: 20px;
+  padding: 0 0 4px 6px;
+  cursor: pointer;
+}

@@ -1,4 +1,4 @@
-import type { Server } from ".prisma/client";
+import type { Server, User } from ".prisma/client";
 import type { GetServerSidePropsContext, NextPage } from "next";
 import { useCallback, useEffect, useState } from "react";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
@@ -7,11 +7,15 @@ import styles from "../styles/pages/index.module.scss";
 import ServerList from "../components/ServerList";
 import Profile from "../components/Profile";
 
-const Index: NextPage = () => {
+type Props = {
+  user: User;
+};
+
+const Index: NextPage<Props> = ({ user }) => {
   return (
     <div className={styles.wrapper}>
       <Profile />
-      <ServerList />
+      <ServerList user={user} />
     </div>
   );
 };
@@ -22,5 +26,5 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
   const session = await getServerAuthSession(ctx);
   return !session
     ? { redirect: { destination: "/login", persistent: false } }
-    : { props: {} };
+    : { props: { user: session.user } };
 }

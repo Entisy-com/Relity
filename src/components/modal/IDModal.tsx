@@ -1,9 +1,8 @@
 import { FC, useEffect } from "react";
-import { object } from "zod";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {
-  open: any;
+  open: { id: string; open: boolean };
   // eslint-disable-next-line @typescript-eslint/ban-types
   setOpen: Function;
   children?: JSX.Element | JSX.Element[];
@@ -26,7 +25,7 @@ const Modal: FC<Props> = ({
     document.addEventListener("keydown", (e) => {
       if (e.keyCode !== 27 && e.key !== "Escape") return;
       if (open) {
-        setOpen(false);
+        setOpen({ id: open.id, open: false });
       }
     });
   }, [open, setOpen]);
@@ -46,7 +45,7 @@ const Modal: FC<Props> = ({
           {closable && (
             <img
               onClick={() => {
-                setOpen(false);
+                setOpen({ id: open.id, open: false });
               }}
               className={styles.close_button}
               src="/cross.svg"

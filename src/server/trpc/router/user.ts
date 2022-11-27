@@ -2,36 +2,29 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
+import { TRPCError } from "@trpc/server";
 
 const ee = new EventEmitter();
-export const messageRouter = router({
-  createMessage: protectedProcedure
-    .input(
-      z.object({
-        content: z.string(),
-        channelId: z.string(),
-        authorId: z.string(),
-        color: z.string().nullish(),
-        backgroundColor: z.string().nullish(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const message = ctx.prisma.message.create({
+export const userRouter = router({
+  joinServer: protectedProcedure
+    .input(z.object({ userId: z.string(), serverId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const server = ctx.prisma.server.findUnique({
+        where: { id: input.serverId },
+      });
+      if (!server) throw new TRPCError({ code: "NOT_FOUND" });
+      const update = ctx.prisma.server.update({
+        where: {
+          id: input.serverId,
+        },
         data: {
-          content: input.content,
-          color: input.color,
-          backgroundColor: input.color,
-          author: {
+          users: {
             connect: {
-              id: input.authorId,
+              id: input.userId,
             },
-          },
-          textChannel: {
-            connect: { id: input.channelId },
           },
         },
       });
-      ee.emit("add", message);
-      return message;
+      return update;
     }),
 });

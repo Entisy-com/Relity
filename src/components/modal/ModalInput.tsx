@@ -6,14 +6,22 @@ type Props = {
   type?: string;
   rref?: MutableRefObject<any>;
   password?: boolean;
+  autoComplete?: boolean;
 };
 
-const ModalInput: FC<Props> = ({ rref, type, placeholder, password }) => {
+const ModalInput: FC<Props> = ({
+  rref,
+  type,
+  placeholder,
+  password,
+  autoComplete,
+}) => {
   const [hidden, setHidden] = useState(true);
 
   return (
     <div className={styles.input}>
       <input
+        autoComplete={autoComplete ? "on" : "off"}
         id="input_field"
         autoFocus
         ref={rref}

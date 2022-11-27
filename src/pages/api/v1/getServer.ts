@@ -4,7 +4,7 @@ import { IncomingMessage, ServerResponse } from "http";
 
 import { getServerAuthSession } from "../../../server/common/get-server-auth-session";
 
-const isServerAThing = async (
+export const isServerAThing = async (
   req:
     | NextApiRequest
     | (IncomingMessage & {
@@ -20,10 +20,9 @@ const isServerAThing = async (
   if (url?.includes("/")) {
     const params = url.split("/");
     serverId = params[0]?.toString();
+  } else {
+    serverId = url!.toString();
   }
-  serverId = url!.toString();
   const server = await prisma?.server.findUnique({ where: { id: serverId } });
   return server;
 };
-
-export default isServerAThing;

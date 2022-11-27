@@ -1,6 +1,5 @@
 import { useSession } from "next-auth/react";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "./modal/Modal";
 import ModalTitle from "./modal/ModalTitle";
 import styles from "../styles/components/profile.module.scss";
@@ -11,13 +10,6 @@ const Profile = () => {
   const session = useSession();
   const user = session.data?.user;
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    document.addEventListener("keydown", (e) => {
-      if (e.keyCode !== 27 && e.key !== "Escape") return;
-      setOpen(false);
-    });
-  }, [open, setOpen]);
 
   if (!user) return <></>;
 

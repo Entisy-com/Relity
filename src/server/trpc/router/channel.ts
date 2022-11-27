@@ -1,8 +1,9 @@
-import { Prisma, TextChannel } from "@prisma/client";
-import { observable } from "@trpc/server/observable";
-import EventEmitter from "events";
+import { Prisma } from "@prisma/client";
+import type { TextChannel } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
+import EventEmitter from "events";
+import { observable } from "@trpc/server/observable";
 
 const ee = new EventEmitter();
 const defaultChannelSelect = Prisma.validator<Prisma.TextChannelSelect>()({
@@ -10,6 +11,7 @@ const defaultChannelSelect = Prisma.validator<Prisma.TextChannelSelect>()({
   name: true,
   createdAt: true,
   updatedAt: true,
+  serverid: true,
 });
 export const channelRouter = router({
   createChannel: protectedProcedure
@@ -25,15 +27,15 @@ export const channelRouter = router({
           },
         },
       });
-      ee.emit("add", channel);
+      ee.emit("addChannel", channel);
       return channel;
     }),
   onChannelCreate: protectedProcedure.subscription(() => {
     return observable<TextChannel>((emit) => {
       const onCreate = (data: TextChannel) => emit.next(data);
-      ee.on("add", onCreate);
+      ee.on("addChannel", onCreate);
       return () => {
-        ee.off("add", onCreate);
+        ee.off("addChannel", onCreate);
       };
     });
   }),
@@ -54,6 +56,7 @@ export const channelRouter = router({
   getChannels: protectedProcedure
     .input(
       z.object({
+        serverid: z.string(),
         limit: z.number().min(1).max(100).nullish(),
         cursor: z.string().nullish(),
       })
@@ -64,7 +67,7 @@ export const channelRouter = router({
       const channel = await ctx.prisma.textChannel.findMany({
         select: defaultChannelSelect,
         take: limit + 1,
-        where: {},
+        where: { serverid: input.serverid },
         cursor: cursor
           ? {
               id: cursor,
@@ -79,7 +82,7 @@ export const channelRouter = router({
         nextCursor = nextChannel.id;
       }
       return {
-        servers: channel.reverse(),
+        channel: channel.reverse(),
         nextCursor,
       };
     }),

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from "@prisma/client";
 import type { Server } from "@prisma/client";
 import { z } from "zod";
@@ -25,17 +24,22 @@ export const serverRouter = router({
         data: {
           name: input.name,
           owner: { connect: { id: ctx.session.user.id } },
+          users: {
+            connect: {
+              id: ctx.session.user.id,
+            },
+          },
         },
       });
-      ee.emit("add", server);
+      ee.emit("addServer", server);
       return server;
     }),
   onServerCreate: protectedProcedure.subscription(() => {
     return observable<Server>((emit) => {
       const onCreate = (data: Server) => emit.next(data);
-      ee.on("add", onCreate);
+      ee.on("addServer", onCreate);
       return () => {
-        ee.off("add", onCreate);
+        ee.off("addServer", onCreate);
       };
     });
   }),
@@ -47,10 +51,24 @@ export const serverRouter = router({
           id: input.id,
         },
         include: {
-          users: true,
+          users: {
+            include: {
+              bannedon: true,
+              adminuser: true,
+              messages: true,
+              mentionedin: true,
+              server: true,
+              ownerof: true,
+              roles: true,
+            },
+          },
           bannedUser: true,
           owner: true,
-          roles: true,
+          roles: {
+            include: {
+              users: true,
+            },
+          },
           textchannel: true,
         },
       });
@@ -59,6 +77,7 @@ export const serverRouter = router({
   getServers: protectedProcedure
     .input(
       z.object({
+        userid: z.string(),
         limit: z.number().min(1).max(100).nullish(),
         cursor: z.string().nullish(),
       })
@@ -69,7 +88,7 @@ export const serverRouter = router({
       const servers = await ctx.prisma.server.findMany({
         select: defaultServerSelect,
         take: limit + 1,
-        where: {},
+        where: { users: { some: { id: input.userid } } },
         cursor: cursor
           ? {
               id: cursor,

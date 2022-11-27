@@ -1,5 +1,7 @@
 .modal {
   display: flex;
+  align-items: center;
+  justify-content: center;
   flex-direction: column;
   outline: none;
   border: none;
@@ -10,6 +12,7 @@
   top: 50%;
   left: 50%;
   translate: -50% -50%;
+  z-index: 999;
 }
 
 .blur {
@@ -61,6 +64,7 @@
   font-size: 26px;
   margin-block: 4px;
   padding: 4px;
+  padding-inline: 24px;
   margin-bottom: 12px;
 }
 

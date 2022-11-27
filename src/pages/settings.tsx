@@ -22,27 +22,6 @@ const Settings: NextPage<Props> = ({ user }) => {
   const [showChangePasswordModalOpen, setShowChangePasswordModalOpen] =
     useState(false);
 
-  useEffect(() => {
-    document.addEventListener("keydown", (e) => {
-      if (e.keyCode !== 27 && e.key !== "Escape") return;
-      if (
-        showChangeUsernameModalOpen ||
-        showChangeEmailModalOpen ||
-        showChangePasswordModalOpen
-      ) {
-        setShowChangeUsernameModalOpen(false);
-        setShowChangeEmailModalOpen(false);
-        setShowChangePasswordModalOpen(false);
-      }
-    });
-  }, [
-    showChangePasswordModalOpen,
-    setShowChangePasswordModalOpen,
-    showChangeUsernameModalOpen,
-    setShowChangeUsernameModalOpen,
-    showChangeEmailModalOpen,
-    setShowChangeEmailModalOpen,
-  ]);
   //TODO: change example options into components
 
   return (
