@@ -45,15 +45,15 @@ export const messageRouter = router({
           },
         },
       });
-      ee.emit("add", message);
+      ee.emit("addMessage", message);
       return message;
     }),
   onMessageCreate: protectedProcedure.subscription(() => {
     return observable<Message>((emit) => {
       const onCreate = (data: Message) => emit.next(data);
-      ee.on("add", onCreate);
+      ee.on("addMessage", onCreate);
       return () => {
-        ee.off("add", onCreate);
+        ee.off("addMessage", onCreate);
       };
     });
   }),

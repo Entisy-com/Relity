@@ -6,6 +6,7 @@ import { BASE_URL } from "../utils/constants";
 import Modal from "./modal/Modal";
 import ModalButton from "./modal/ModalButton";
 import ModalTitle from "./modal/ModalTitle";
+import { useSession } from "next-auth/react";
 
 type Props = {
   setSelectedChannel: Function;
@@ -19,6 +20,9 @@ const ChannelList: FC<Props> = ({
   setChannelSettingsModalOpen,
   setSelectedChannel,
 }) => {
+  const { data: session } = useSession();
+  const user = session?.user;
+
   const channelQuery = trpc.channel.getChannels.useInfiniteQuery(
     { serverid: serverId },
     { getPreviousPageParam: (d) => d.nextCursor }
@@ -71,17 +75,28 @@ const ChannelList: FC<Props> = ({
     },
   });
 
+  const { data: server } = trpc.server.getServerById.useQuery({
+    id: serverId,
+  });
+
+  if (!user) return <></>;
+
   return (
     <>
       <div className={styles.wrapper}>
         {(channel ?? []).map((channel) => (
           <a
             onContextMenu={(e) => {
+              if (server?.ownerid !== user.id) return;
               e.preventDefault();
               setSelectedChannel(channel);
               if (!channelSettingsModalOpen) setChannelSettingsModalOpen(true);
             }}
-            className={styles.channel}
+            className={`${styles.channel} ${
+              window.location.href.endsWith(
+                `${channel.serverid}/${channel.id}`
+              ) && styles.active
+            }`}
             key={channel.id}
             href={`${BASE_URL}/${channel.serverid}/${channel.id}`}
             rel="noreferrer"

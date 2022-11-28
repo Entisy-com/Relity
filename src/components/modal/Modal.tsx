@@ -11,6 +11,7 @@ type Props = {
   closable?: boolean;
   blur?: boolean;
   darken?: boolean | string;
+  onSubmit?: Function;
 };
 
 const Modal: FC<Props> = ({
@@ -21,6 +22,7 @@ const Modal: FC<Props> = ({
   closable,
   blur,
   darken,
+  onSubmit,
 }) => {
   useEffect(() => {
     document.addEventListener("keydown", (e) => {
@@ -35,6 +37,9 @@ const Modal: FC<Props> = ({
     <>
       {open && (
         <form
+          onSubmit={() => {
+            if (onSubmit) onSubmit();
+          }}
           ref={ref}
           className={`${styles.modal} ${blur && styles.blur} ${
             darken && styles.darken

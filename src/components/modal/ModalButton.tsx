@@ -1,21 +1,22 @@
 import { FC, LegacyRef } from "react";
-import { Ref } from "react-hook-form";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {
   value?: string;
   onClick?: Function;
-  ref?: any;
+  rref?: any;
+  type?: string;
 };
 
-const ModalButton: FC<Props> = ({ ref, value, onClick }) => {
+const ModalButton: FC<Props> = ({ rref, value, type, onClick }) => {
   return (
     <p
-      ref={ref}
+      ref={rref}
       onClick={() => {
         if (onClick) onClick();
       }}
       className={styles.button}
+      id={type === "delete" ? styles.delete : ""}
     >
       {value}
     </p>

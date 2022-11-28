@@ -67,10 +67,11 @@ const ServerList: FC<Props> = ({ user }) => {
     },
   });
 
-  const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
-
   const createServer = trpc.server.createServer.useMutation();
+  const deleteServer = trpc.server.deleteServer.useMutation();
   const nameRef = useRef<HTMLInputElement>(null);
+  const deleteRef = useRef<HTMLInputElement>(null);
+  const repeatDeleteRef = useRef<HTMLInputElement>(null);
 
   function handleCreateServer() {
     if (!nameRef.current) return;
@@ -78,6 +79,21 @@ const ServerList: FC<Props> = ({ user }) => {
     createServer.mutate({ name: nameRef.current.value });
   }
 
+  function handleDeleteServer() {
+    if (!deleteRef.current || !repeatDeleteRef.current) return;
+    if (
+      !(deleteRef.current.value.trim().length > 0) ||
+      !(repeatDeleteRef.current.value.trim().length > 0)
+    )
+      return;
+    if (deleteRef.current.value.trim() !== repeatDeleteRef.current.value.trim())
+      return;
+    if (deleteRef.current.value.trim() !== selectedServer?.name.trim()) return;
+    deleteServer.mutate({ id: selectedServer?.id! });
+  }
+
+  const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
+  const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useState<Server>();
 
@@ -85,7 +101,7 @@ const ServerList: FC<Props> = ({ user }) => {
     <>
       <div className={styles.wrapper}>
         {(server ?? []).map((server) => (
-          <>
+          <div key={server.id}>
             <div
               className={styles.server}
               onClick={() => {
@@ -112,7 +128,7 @@ const ServerList: FC<Props> = ({ user }) => {
               )}
               <p className={styles.logo}>{server.name.substring(0, 2)}</p>
             </div>
-          </>
+          </div>
         ))}
         <div
           className={styles.add_server}
@@ -122,6 +138,10 @@ const ServerList: FC<Props> = ({ user }) => {
         </div>
       </div>
       <Modal
+        onSubmit={() => {
+          setCreateServerModalOpen(false);
+          handleCreateServer();
+        }}
         blur
         darken="3"
         closable
@@ -147,13 +167,40 @@ const ServerList: FC<Props> = ({ user }) => {
       >
         <ModalTitle value={selectedServer?.name!} />
         <ModalText value="Change Name" />
-        {/*  mach das man das nur machen kann wenn man owner ist und mach mal rechtsklick auf das server icon unten */}
         <ModalInput placeholder="Server Name" rref={nameRef} />
         <ModalButton
-          value="Create!"
+          value="Done!"
           onClick={() => {
             setCreateServerModalOpen(false);
             handleCreateServer();
+          }}
+        />
+        <ModalButton
+          type="delete"
+          value="Delete Server!"
+          onClick={() => {
+            setServerInfoModalOpen(false);
+            setCreateServerModalOpen(false);
+            setDeleteServerModalOpen(true);
+          }}
+        />
+      </Modal>
+      <Modal
+        blur
+        darken="3"
+        closable
+        open={deleteServerModalOpen}
+        setOpen={setDeleteServerModalOpen}
+      >
+        <ModalTitle value={selectedServer?.name!} />
+        <ModalInput placeholder="Server Name" rref={deleteRef} />
+        <ModalInput placeholder="Repeat Server Name" rref={repeatDeleteRef} />
+        <ModalButton
+          type="delete"
+          value="Delete Server!"
+          onClick={() => {
+            setDeleteServerModalOpen(false);
+            handleDeleteServer();
           }}
         />
       </Modal>

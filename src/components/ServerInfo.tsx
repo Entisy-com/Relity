@@ -62,7 +62,9 @@ const ServerInfo: FC<Props> = ({ server }) => {
     <>
       <div className={styles.wrapper}>
         <p
-          onClick={() => setServerOptionsModalOpen(true)}
+          onClick={() => {
+            if (server.ownerid === user.id) setServerOptionsModalOpen(true);
+          }}
           className={styles.server_name}
         >
           {server.name}
@@ -74,6 +76,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           serverId={server.id}
         />
         <UserList
+          ownerId={server.ownerid}
           setSelectedUser={setSelectedUser}
           serverUserInfoModalOpen={serverUserInfoModalOpen}
           setServerUserInfoModalOpen={setServerUserInfoModalOpen}

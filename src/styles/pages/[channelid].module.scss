@@ -1,0 +1,13 @@
+.wrapper {
+}
+.chat {
+  position: absolute;
+  width: calc(100% - 400px);
+  height: calc(100vh - 50px);
+  background-color: red;
+}
+
+.input {
+  position: absolute;
+  bottom: 0;
+}

@@ -1,14 +1,9 @@
 import { Role, User } from "@prisma/client";
-import { FC, useEffect, useState } from "react";
-import { string } from "zod";
+import { FC } from "react";
 import styles from "../styles/components/userList.module.scss";
-import { trpc } from "../utils/trpc";
-import Modal from "./modal/Modal";
-import ModalButton from "./modal/ModalButton";
-import ModalText from "./modal/ModalText";
-import ModalTitle from "./modal/ModalTitle";
 
 type Props = {
+  ownerId: string;
   setSelectedUser: Function;
   serverUserInfoModalOpen: boolean;
   setServerUserInfoModalOpen: Function;
@@ -18,6 +13,7 @@ type Props = {
 };
 
 const UserList: FC<Props> = ({
+  ownerId,
   type,
   users,
   roles,
@@ -28,20 +24,38 @@ const UserList: FC<Props> = ({
   return (
     <>
       <div className={styles.wrapper}>
-        {(users ?? []).map((user) => {
-          return (
-            <p
-              className={styles.user}
-              onClick={() => {
-                setSelectedUser(user);
-                setServerUserInfoModalOpen(true);
-              }}
-              key={user.id}
-            >
-              {user.name}
-            </p>
-          );
-        })}
+        {(users ?? [])
+          .sort((a: any, b: any) => a.name.localeCompare(b.name))
+          .map((user) => {
+            return (
+              <div
+                className={styles.user}
+                onClick={() => {
+                  setSelectedUser(user);
+                  setServerUserInfoModalOpen(true);
+                }}
+                key={user.id}
+              >
+                <img
+                  className={styles.image}
+                  src={user.image ?? ""}
+                  alt=""
+                  width={30}
+                  height={30}
+                />
+                <p className={styles.name}>{user.name}</p>
+                {ownerId === user.id && (
+                  <img
+                    className={styles.owner}
+                    src="/crown.svg"
+                    width={15}
+                    height={15}
+                    alt=""
+                  />
+                )}
+              </div>
+            );
+          })}
       </div>
     </>
   );

@@ -34,6 +34,17 @@ export const serverRouter = router({
       ee.emit("addServer", server);
       return server;
     }),
+  deleteServer: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await ctx.prisma.server.delete({
+        where: {
+          id: input.id,
+        },
+      });
+      ee.emit("deleteServer");
+      return;
+    }),
   onServerCreate: protectedProcedure.subscription(() => {
     return observable<Server>((emit) => {
       const onCreate = (data: Server) => emit.next(data);

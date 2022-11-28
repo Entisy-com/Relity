@@ -22,6 +22,7 @@ const Invite: NextPage<Props> = ({ server }) => {
     const serverId = server.id;
     const userId = user?.id!;
     joinMutation.mutate({ serverId, userId });
+    window.location.href = `/${serverId}`;
   }
 
   console.log({ server });
