@@ -58,6 +58,7 @@ model Role {
   updatedAt   DateTime     @updatedAt
   mentionedIn Message[]
   visible     Boolean
+  color       String
 }
 
 model Server {

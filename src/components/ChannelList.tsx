@@ -7,6 +7,7 @@ import Modal from "./modal/Modal";
 import ModalButton from "./modal/ModalButton";
 import ModalTitle from "./modal/ModalTitle";
 import { useSession } from "next-auth/react";
+import { log } from "console";
 
 type Props = {
   setSelectedChannel: Function;
@@ -29,6 +30,7 @@ const ChannelList: FC<Props> = ({
   );
 
   const utils = trpc.useContext();
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
     channelQuery;
@@ -41,6 +43,9 @@ const ChannelList: FC<Props> = ({
   });
 
   const addChannel = useCallback((incoming?: TextChannel[]) => {
+    // const { data: allData } = trpc.server.getServerById({
+    //   id: incoming![incoming!.length - 1]?.id,
+    // });
     setChannel((current) => {
       const map: Record<TextChannel["id"], TextChannel> = {};
       for (const chan of current ?? []) {
@@ -58,11 +63,11 @@ const ChannelList: FC<Props> = ({
   }, []);
 
   useEffect(() => {
-    const channel = channelQuery.data?.pages.map((page) => page.channel).flat();
-    addChannel(channel);
+    const channels = channelQuery.data?.pages
+      .map((page) => page.channel)
+      .flat();
+    addChannel(channels);
   }, [channelQuery.data?.pages, addChannel]);
-
-  useEffect(() => {});
 
   trpc.channel.onChannelCreate.useSubscription(undefined, {
     onData(channel) {
@@ -71,7 +76,7 @@ const ChannelList: FC<Props> = ({
     onError(err) {
       console.error("Subscription error:", err);
       // we might have missed a message - invalidate cache
-      utils.channel.getChannels.invalidate();
+      utils.server.getServers.invalidate();
     },
   });
 
@@ -98,12 +103,15 @@ const ChannelList: FC<Props> = ({
               ) && styles.active
             }`}
             key={channel.id}
-            href={`${BASE_URL}/${channel.serverid}/${channel.id}`}
+            href={`${BASE_URL}/${serverId}/${channel.id}`}
             rel="noreferrer"
           >
-            {channel.name?.length > 18
-              ? channel.name.substring(0, 18).concat("...")
-              : channel.name}
+            <>
+              {console.warn(channel.name)}
+              {channel.name?.length > 18
+                ? channel.name.substring(0, 18).concat("...")
+                : channel.name}
+            </>
           </a>
         ))}
       </div>

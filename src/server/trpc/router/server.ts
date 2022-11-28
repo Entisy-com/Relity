@@ -34,17 +34,79 @@ export const serverRouter = router({
       ee.emit("addServer", server);
       return server;
     }),
+  updateServer: protectedProcedure
+    .input(
+      z.object({
+        serverid: z.string(),
+        name: z.string().optional(),
+        pfp: z.string().optional(),
+        banner: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const server: Server = await ctx.prisma.server.update({
+        where: { id: input.serverid },
+        data: {
+          name: input.name,
+          pfp: input.pfp,
+          banner: input.banner,
+        },
+      });
+      ee.emit("updateServer", server);
+      return server;
+    }),
   deleteServer: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await ctx.prisma.server.delete({
+      const channelUpdate = await ctx.prisma.textChannel.deleteMany({
+        where: {
+          serverid: input.id,
+        },
+      });
+      const server = await ctx.prisma.server.findUnique({
+        where: { id: input.id },
+        select: {
+          users: true,
+        },
+      });
+      server?.users.forEach(async (user) => {
+        await ctx.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            server: {
+              disconnect: {
+                id: input.id,
+              },
+            },
+          },
+        });
+      });
+      const deleteServer = await ctx.prisma.server.delete({
         where: {
           id: input.id,
         },
       });
-      ee.emit("deleteServer");
-      return;
+      ee.emit("deleteServer", deleteServer);
+      return deleteServer;
     }),
+  onServerDelete: protectedProcedure.subscription(() => {
+    return observable<Server>((emit) => {
+      const onDelete = (data: Server) => emit.next(data);
+      ee.on("deleteServer", onDelete);
+      return () => {
+        ee.off("deleteServer", onDelete);
+      };
+    });
+  }),
+  onServerUpdate: protectedProcedure.subscription(() => {
+    return observable<Server>((emit) => {
+      const onDelete = (data: Server) => emit.next(data);
+      ee.on("updateServer", onDelete);
+      return () => {
+        ee.off("updateServer", onDelete);
+      };
+    });
+  }),
   onServerCreate: protectedProcedure.subscription(() => {
     return observable<Server>((emit) => {
       const onCreate = (data: Server) => emit.next(data);

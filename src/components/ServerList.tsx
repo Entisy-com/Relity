@@ -10,6 +10,8 @@ import { trpc } from "../utils/trpc";
 import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import ModalText from "./modal/ModalText";
+import ModalFileSelect from "./modal/ModalFileSelect";
+import ModalImage from "./modal/ModalImage";
 
 type Props = {
   user: User;
@@ -90,6 +92,7 @@ const ServerList: FC<Props> = ({ user }) => {
       return;
     if (deleteRef.current.value.trim() !== selectedServer?.name.trim()) return;
     deleteServer.mutate({ id: selectedServer?.id! });
+    window.location.href = "/";
   }
 
   const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
@@ -126,7 +129,13 @@ const ServerList: FC<Props> = ({ user }) => {
               ) : (
                 <></>
               )}
-              <p className={styles.logo}>{server.name.substring(0, 2)}</p>
+              <div className={styles.logo}>
+                {server.pfp ? (
+                  <img src={server.pfp} alt="" width={40} height={40} />
+                ) : (
+                  <p>{server.name.substring(0, 2)}</p>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -166,6 +175,16 @@ const ServerList: FC<Props> = ({ user }) => {
         setOpen={setServerInfoModalOpen}
       >
         <ModalTitle value={selectedServer?.name!} />
+        {selectedServer?.pfp ? (
+          <ModalImage size={100} src={selectedServer?.pfp!} />
+        ) : (
+          <></>
+        )}
+        <ModalFileSelect
+          serverId={selectedServer?.id!}
+          value="Set Picture"
+          fileType=".png, .jpg, .jpeg"
+        />
         <ModalText value="Change Name" />
         <ModalInput placeholder="Server Name" rref={nameRef} />
         <ModalButton

@@ -58,14 +58,14 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     setUpdated(true);
   }
 
-  useEffect(() => {
-    const query = trpc.message.getMessages.useInfiniteQuery({
-      channelId: channel.id,
-    });
-    const msgs = query.data?.pages.map((page) => page.messages).flat();
-    setMessages(msgs);
-    setUpdated(false);
-  }, [updated, setUpdated]);
+  // useEffect(() => {
+  //   const query = trpc.message.getMessages.useInfiniteQuery({
+  //     channelId: channel.id,
+  //   });
+  //   const msgs = query.data?.pages.map((page) => page.messages).flat();
+  //   setMessages(msgs);
+  //   setUpdated(false);
+  // }, [updated, setUpdated]);
 
   if (!allData) return <></>;
   if (!user) return <></>;

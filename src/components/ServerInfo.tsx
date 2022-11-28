@@ -8,7 +8,7 @@ import {
 } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import { userAgent } from "next/server";
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
