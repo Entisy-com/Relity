@@ -20,7 +20,7 @@ const ChannelList: FC<Props> = ({
   const { data: session } = useSession();
   const user = session?.user;
 
-  const channelQuery = trpc.channel.getChannels.useInfiniteQuery(
+  const textChannelQuery = trpc.textChannel.getChannels.useInfiniteQuery(
     { serverid },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
@@ -28,20 +28,17 @@ const ChannelList: FC<Props> = ({
   const utils = trpc.useContext();
 
   const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
-    channelQuery;
+    textChannelQuery;
 
-  const [channel, setChannel] = useState(() => {
-    const channels = channelQuery.data?.pages
+  const [textChannel, setTextChannel] = useState(() => {
+    const channels = textChannelQuery.data?.pages
       .map((page) => page.channel)
       .flat();
     return channels;
   });
 
   const addChannel = useCallback((incoming?: TextChannel[]) => {
-    // const { data: allData } = trpc.server.getServerById({
-    //   id: incoming![incoming!.length - 1]?.id,
-    // });
-    setChannel((current) => {
+    setTextChannel((current) => {
       const map: Record<TextChannel["id"], TextChannel> = {};
       for (const chan of current ?? []) {
         map[chan.id] = chan;
@@ -58,20 +55,20 @@ const ChannelList: FC<Props> = ({
   }, []);
 
   useEffect(() => {
-    const channels = channelQuery.data?.pages
+    const channels = textChannelQuery.data?.pages
       .map((page) => page.channel)
       .flat();
     addChannel(channels);
-  }, [channelQuery.data?.pages, addChannel]);
+  }, [textChannelQuery.data?.pages, addChannel]);
 
-  trpc.channel.onChannelCreate.useSubscription(undefined, {
+  trpc.textChannel.onChannelCreate.useSubscription(undefined, {
     onData(channel) {
       addChannel([channel]);
     },
     onError(err) {
       console.error("Subscription error:", err);
       // we might have missed a message - invalidate cache
-      utils.channel.getChannels.invalidate();
+      utils.textChannel.getChannels.invalidate();
     },
   });
 
@@ -84,9 +81,8 @@ const ChannelList: FC<Props> = ({
   return (
     <>
       <div className={styles.wrapper}>
-        {(channel ?? []).map((channel) => (
+        {(textChannel ?? []).map((channel) => (
           <>
-            {console.log({ channel })}
             <a
               onContextMenu={(e) => {
                 if (server?.ownerid !== user.id) return;

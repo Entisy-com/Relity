@@ -1,7 +1,7 @@
 import { router } from "../trpc";
 import {
   authRouter,
-  channelRouter,
+  textChannelRouter,
   messageRouter,
   serverRouter,
   userRouter,
@@ -10,7 +10,7 @@ import {
 export const appRouter = router({
   auth: authRouter,
   server: serverRouter,
-  channel: channelRouter,
+  textChannel: textChannelRouter,
   message: messageRouter,
   user: userRouter,
 });

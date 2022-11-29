@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, VoiceChannel } from "@prisma/client";
 import type { TextChannel } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
@@ -6,18 +6,20 @@ import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 
 const ee = new EventEmitter();
-const defaultChannelSelect = Prisma.validator<Prisma.TextChannelSelect>()({
+const defaultChannelSelect = Prisma.validator<Prisma.VoiceChannelSelect>()({
   id: true,
   name: true,
   createdAt: true,
   updatedAt: true,
   serverid: true,
+  category: true,
+  position: true,
 });
-export const channelRouter = router({
+export const voiceChannelRouter = router({
   createChannel: protectedProcedure
     .input(z.object({ name: z.string(), serverid: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const channel = ctx.prisma.textChannel.create({
+      const channel = await ctx.prisma.voiceChannel.create({
         data: {
           name: input.name,
           server: {
@@ -27,28 +29,29 @@ export const channelRouter = router({
           },
         },
       });
-      ee.emit("addChannel", channel);
+      console.warn({ channel });
+      ee.emit("addVoiceChannel", channel);
       return channel;
     }),
   onChannelCreate: protectedProcedure.subscription(() => {
-    return observable<TextChannel>((emit) => {
-      const onCreate = (data: TextChannel) => emit.next(data);
-      ee.on("addChannel", onCreate);
+    return observable<VoiceChannel>((emit) => {
+      const onCreate = (data: VoiceChannel) => emit.next(data);
+      ee.on("addVoiceChannel", onCreate);
       return () => {
-        ee.off("addChannel", onCreate);
+        ee.off("addVoiceChannel", onCreate);
       };
     });
   }),
   getChannelById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const channel = await ctx.prisma.textChannel.findUnique({
+      const channel = await ctx.prisma.voiceChannel.findUnique({
         where: {
           id: input.id,
         },
         include: {
-          messages: true,
           server: true,
+          category: true,
         },
       });
       return channel;

@@ -4,6 +4,7 @@ import {
   Role,
   Server,
   TextChannel,
+  VoiceChannel,
   User,
 } from "@prisma/client";
 import { useSession } from "next-auth/react";
@@ -50,11 +51,14 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const [serverUserInfoModalOpen, setServerUserInfoModalOpen] = useState(false);
   const [channelSettingsModalOpen, setChannelSettingsModalOpen] =
     useState(false);
+  const [deleteChannelModalOpen, setDeleteChannelModalOpen] = useState(false);
 
-  const [selectedChannel, setSelectedChannel] = useState<TextChannel>();
+  const [selectedChannel, setSelectedChannel] = useState<
+    TextChannel | VoiceChannel
+  >();
   const [selectedUser, setSelectedUser] = useState<User>();
 
-  const createChannel = trpc.channel.createChannel.useMutation();
+  const createChannel = trpc.textChannel.createChannel.useMutation();
 
   if (!user) return <></>;
 
@@ -94,7 +98,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
       >
         <ModalTitle value={server.name} />
         <ModalText value="Create TextChannel" />
-        <ModalInput placeholder="TextChannel Name" rref={tcRef} />
+        <ModalInput focus placeholder="TextChannel Name" rref={tcRef} />
         <ModalButton
           value="Create!"
           onClick={() => {

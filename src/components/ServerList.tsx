@@ -25,7 +25,6 @@ const ServerList: FC<Props> = ({ user }) => {
 
   const utils = trpc.useContext();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
     serverQuery;
 
@@ -33,11 +32,8 @@ const ServerList: FC<Props> = ({ user }) => {
     const servers = serverQuery.data?.pages.map((page) => page.servers).flat();
     return servers;
   });
-
+  // TODO: should only add to user of server
   const addServer = useCallback((incoming?: Server[]) => {
-    // const { data: allData } = trpc.server.getServerById({
-    //   id: incoming![incoming!.length - 1]?.id,
-    // });
     setServer((current) => {
       const map: Record<Server["id"], Server> = {};
       for (const serv of current ?? []) {

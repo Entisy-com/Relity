@@ -157,7 +157,12 @@ const Settings: NextPage<Props> = ({ user }) => {
         setOpen={setShowChangePasswordModalOpen}
       >
         <ModalTitle value="Change Password" />
-        <ModalInput placeholder="Current Password" type="password" password />
+        <ModalInput
+          focus
+          placeholder="Current Password"
+          type="password"
+          password
+        />
         <ModalInput placeholder="New Password" type="password" password />
         <ModalInput
           placeholder="Repeat new Password"

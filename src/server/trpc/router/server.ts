@@ -20,7 +20,7 @@ export const serverRouter = router({
   createServer: protectedProcedure
     .input(z.object({ name: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const server: Server = await ctx.prisma.server.create({
+      const server = await ctx.prisma.server.create({
         data: {
           name: input.name,
           owner: {
@@ -48,7 +48,7 @@ export const serverRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const server: Server = await ctx.prisma.server.update({
+      const server = await ctx.prisma.server.update({
         where: { id: input.serverid },
         data: {
           name: input.name,
@@ -175,7 +175,6 @@ export const serverRouter = router({
       });
       let nextCursor: typeof cursor | undefined = undefined;
       if (servers.length > limit) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const nextServer = servers.pop()!;
         nextCursor = nextServer.id;
       }

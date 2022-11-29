@@ -23,13 +23,41 @@ model AdminUser {
 }
 
 model TextChannel {
-  id        String    @id @default(cuid())
-  name      String
-  server    Server    @relation(fields: [serverid], references: [id])
-  serverid  String
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String       @id @default(cuid())
+  name        String
+  server      Server       @relation(fields: [serverid], references: [id])
+  serverid    String
+  messages    Message[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  category    Category?    @relation(fields: [categoryid], references: [id])
+  categoryid  String?
+  permissions Permission[]
+  position    Int          @default(0)
+}
+
+model VoiceChannel {
+  id          String       @id @default(cuid())
+  name        String
+  server      Server       @relation(fields: [serverid], references: [id])
+  serverid    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  category    Category?    @relation(fields: [categoryid], references: [id])
+  categoryid  String?
+  permissions Permission[]
+  position    Int          @default(0)
+}
+
+model Category {
+  id            String         @id @default(cuid())
+  name          String
+  textchannels  TextChannel[]
+  voicechannels VoiceChannel[]
+  server        Server         @relation(fields: [serverid], references: [id])
+  serverid      String
+  permissions   Permission[]
+  position      Int            @default(0)
 }
 
 model Message {
@@ -59,22 +87,24 @@ model Role {
   mentionedIn Message[]
   visible     Boolean
   color       String
+  position    Int          @default(0)
 }
 
 model Server {
-  id          String        @id @default(cuid())
-  name        String
-  users       User[]        @relation(name: "users")
-  roles       Role[]
-  textchannel TextChannel[]
-  //voicechannel VoiceChannel[]
-  owner       User          @relation(fields: [ownerid], references: [id])
-  ownerid     String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  bannedUser  User[]        @relation(name: "bannedusers")
-  pfp         String?
-  banner      String?
+  id           String         @id @default(cuid())
+  name         String
+  users        User[]         @relation(name: "users")
+  roles        Role[]
+  textchannel  TextChannel[]
+  voicechannel VoiceChannel[]
+  owner        User           @relation(fields: [ownerid], references: [id])
+  ownerid      String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  bannedUser   User[]         @relation(name: "bannedusers")
+  pfp          String?
+  banner       String?
+  categories   Category[]
 }
 
 enum Permission {

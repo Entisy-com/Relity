@@ -1,7 +1,15 @@
 import { authRouter } from "./auth";
-import { channelRouter } from "./channel";
+import { textChannelRouter } from "./textChannel";
+import { voiceChannelRouter } from "./voiceChannel";
 import { messageRouter } from "./message";
 import { serverRouter } from "./server";
 import { userRouter } from "./user";
 
-export { messageRouter, channelRouter, userRouter, serverRouter, authRouter };
+export {
+  messageRouter,
+  textChannelRouter,
+  voiceChannelRouter,
+  userRouter,
+  serverRouter,
+  authRouter,
+};
