@@ -48,7 +48,8 @@ const ServerList: FC<Props> = ({ user }) => {
       }
 
       return Object.values(map).sort(
-        (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     });
   }, []);
@@ -104,38 +105,37 @@ const ServerList: FC<Props> = ({ user }) => {
     <>
       <div className={styles.wrapper}>
         {(server ?? []).map((server) => (
-          <div key={server.id}>
-            <div
-              className={styles.server}
-              onClick={() => {
-                window.location.href = `/${server.id}`;
-              }}
-              onContextMenu={(e) => {
-                if (server.ownerid === user.id) {
-                  e.preventDefault();
-                  setSelectedServer(server);
-                  setServerInfoModalOpen(true);
-                }
-              }}
-            >
-              {server.ownerid === user.id ? (
-                <img
-                  className={styles.crown}
-                  src="/crown.svg"
-                  alt=""
-                  width={30}
-                  height={30}
-                />
+          <div
+            key={server.id}
+            className={styles.server}
+            onClick={() => {
+              window.location.href = `/${server.id}`;
+            }}
+            onContextMenu={(e) => {
+              if (server.ownerid === user.id) {
+                e.preventDefault();
+                setSelectedServer(server);
+                setServerInfoModalOpen(true);
+              }
+            }}
+          >
+            {server.ownerid === user.id ? (
+              <img
+                className={styles.crown}
+                src="/crown.svg"
+                alt=""
+                width={30}
+                height={30}
+              />
+            ) : (
+              <></>
+            )}
+            <div className={styles.logo}>
+              {server.pfp ? (
+                <img src={server.pfp} alt="" width={40} height={40} />
               ) : (
-                <></>
+                <p>{server.name.substring(0, 2)}</p>
               )}
-              <div className={styles.logo}>
-                {server.pfp ? (
-                  <img src={server.pfp} alt="" width={40} height={40} />
-                ) : (
-                  <p>{server.name.substring(0, 2)}</p>
-                )}
-              </div>
             </div>
           </div>
         ))}

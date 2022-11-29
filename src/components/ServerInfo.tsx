@@ -73,7 +73,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           setSelectedChannel={setSelectedChannel}
           channelSettingsModalOpen={channelSettingsModalOpen}
           setChannelSettingsModalOpen={setChannelSettingsModalOpen}
-          serverId={server.id}
+          serverid={server.id}
         />
         <UserList
           ownerId={server.ownerid}
@@ -98,14 +98,13 @@ const ServerInfo: FC<Props> = ({ server }) => {
         <ModalButton
           value="Create!"
           onClick={() => {
+            setServerOptionsModalOpen(false);
             if (!tcRef.current) return;
             if (!(tcRef.current.value.trim().length > 0)) return;
             createChannel.mutate({
               name: tcRef.current.value,
               serverid: server.id,
             });
-            tcRef.current.value = "";
-            setServerOptionsModalOpen(false);
           }}
         />
         <ModalText value="Create VoiceChannel" />

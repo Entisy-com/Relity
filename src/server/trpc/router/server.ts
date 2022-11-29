@@ -23,7 +23,11 @@ export const serverRouter = router({
       const server: Server = await ctx.prisma.server.create({
         data: {
           name: input.name,
-          owner: { connect: { id: ctx.session.user.id } },
+          owner: {
+            connect: {
+              id: ctx.session.user.id,
+            },
+          },
           users: {
             connect: {
               id: ctx.session.user.id,

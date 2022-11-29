@@ -1,22 +1,18 @@
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { trpc } from "../utils/trpc";
-import { TextChannel, User } from "@prisma/client";
+import { TextChannel } from "@prisma/client";
 import styles from "../styles/components/channelList.module.scss";
 import { BASE_URL } from "../utils/constants";
-import Modal from "./modal/Modal";
-import ModalButton from "./modal/ModalButton";
-import ModalTitle from "./modal/ModalTitle";
 import { useSession } from "next-auth/react";
-import { log } from "console";
 
 type Props = {
   setSelectedChannel: Function;
   channelSettingsModalOpen: boolean;
   setChannelSettingsModalOpen: Function;
-  serverId: string;
+  serverid: string;
 };
 const ChannelList: FC<Props> = ({
-  serverId,
+  serverid,
   channelSettingsModalOpen,
   setChannelSettingsModalOpen,
   setSelectedChannel,
@@ -25,13 +21,12 @@ const ChannelList: FC<Props> = ({
   const user = session?.user;
 
   const channelQuery = trpc.channel.getChannels.useInfiniteQuery(
-    { serverid: serverId },
+    { serverid },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
 
   const utils = trpc.useContext();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
     channelQuery;
 
@@ -76,12 +71,12 @@ const ChannelList: FC<Props> = ({
     onError(err) {
       console.error("Subscription error:", err);
       // we might have missed a message - invalidate cache
-      utils.server.getServers.invalidate();
+      utils.channel.getChannels.invalidate();
     },
   });
 
   const { data: server } = trpc.server.getServerById.useQuery({
-    id: serverId,
+    id: serverid,
   });
 
   if (!user) return <></>;
@@ -90,29 +85,30 @@ const ChannelList: FC<Props> = ({
     <>
       <div className={styles.wrapper}>
         {(channel ?? []).map((channel) => (
-          <a
-            onContextMenu={(e) => {
-              if (server?.ownerid !== user.id) return;
-              e.preventDefault();
-              setSelectedChannel(channel);
-              if (!channelSettingsModalOpen) setChannelSettingsModalOpen(true);
-            }}
-            className={`${styles.channel} ${
-              window.location.href.endsWith(
-                `${channel.serverid}/${channel.id}`
-              ) && styles.active
-            }`}
-            key={channel.id}
-            href={`${BASE_URL}/${serverId}/${channel.id}`}
-            rel="noreferrer"
-          >
-            <>
-              {console.warn(channel.name)}
+          <>
+            {console.log({ channel })}
+            <a
+              onContextMenu={(e) => {
+                if (server?.ownerid !== user.id) return;
+                e.preventDefault();
+                setSelectedChannel(channel);
+                if (!channelSettingsModalOpen)
+                  setChannelSettingsModalOpen(true);
+              }}
+              className={`${styles.channel} ${
+                window.location.href.endsWith(
+                  `${channel.serverid}/${channel.id}`
+                ) && styles.active
+              }`}
+              key={channel.id}
+              href={`${BASE_URL}/${serverid}/${channel.id}`}
+              rel="noreferrer"
+            >
               {channel.name?.length > 18
                 ? channel.name.substring(0, 18).concat("...")
                 : channel.name}
-            </>
-          </a>
+            </a>
+          </>
         ))}
       </div>
     </>
