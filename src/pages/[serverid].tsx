@@ -1,20 +1,11 @@
-import { Role, Server, TextChannel, User } from "@prisma/client";
+import { Server, User } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
-import { useEffect, useRef, useState } from "react";
 import Profile from "../components/Profile";
 import ServerList from "../components/ServerList";
 import { trpc } from "../utils/trpc";
 import { isServerAThing } from "./api/v1/getServer";
 import styles from "../styles/pages/[serverid].module.scss";
-import UserList from "../components/UserList";
-import Modal from "../components/modal/Modal";
-import ModalTitle from "../components/modal/ModalTitle";
-import ModalButton from "../components/modal/ModalButton";
-import ChannelList from "../components/ChannelList";
-import { useSession } from "next-auth/react";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
-import ModalText from "../components/modal/ModalText";
-import ModalInput from "../components/modal/ModalInput";
 import ServerInfo from "../components/ServerInfo";
 
 type Props = {
