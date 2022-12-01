@@ -55,6 +55,8 @@ type Props = {
       voicechannel: VoiceChannel | null;
       updatedAt: Date;
       createdAt: Date;
+      friends: User[];
+      friendswith: User[];
     })[];
     roles: (Role & {
       users: User[];
@@ -65,9 +67,7 @@ type Props = {
 const ServerInfo: FC<Props> = ({ server }) => {
   const { data: session } = useSession();
   const user = session?.user;
-
-  const tcRef = useRef<HTMLInputElement>(null);
-  const vcRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useContext();
 
   const [serverOptionsModalOpen, setServerOptionsModalOpen] = useState(false);
   const [serverUserInfoModalOpen, setServerUserInfoModalOpen] = useState(false);
@@ -81,6 +81,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
     useState(false);
   const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
+  const [serverName, setServerName] = useState("");
 
   const [selectedTextChannel, setSelectedTextChannel] = useState<TextChannel>();
   const [selectedVoiceChannel, setSelectedVoiceChannel] =
@@ -89,14 +90,26 @@ const ServerInfo: FC<Props> = ({ server }) => {
 
   const createTextChannel = trpc.textChannel.createChannel.useMutation();
   const createVoiceChannel = trpc.voiceChannel.createChannel.useMutation();
-
   const UpdateServer = trpc.server.updateServer.useMutation();
   const deleteServer = trpc.server.deleteServer.useMutation();
   const deleteTextChannel = trpc.textChannel.deleteChannel.useMutation();
   const deleteVoiceChannel = trpc.voiceChannel.deleteChannel.useMutation();
+
+  const tcRef = useRef<HTMLInputElement>(null);
+  const vcRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const deleteRef = useRef<HTMLInputElement>(null);
   const repeatDeleteRef = useRef<HTMLInputElement>(null);
+
+  trpc.server.onServerUpdate.useSubscription(undefined, {
+    onData(server) {
+      setServerName(server.name);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+      utils.server.getServerById.invalidate();
+    },
+  });
 
   function handleDeleteServer() {
     if (!deleteRef.current || !repeatDeleteRef.current) return;
@@ -123,6 +136,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
     if (deleteRef.current.value.trim() !== selectedTextChannel?.name.trim())
       return;
     deleteTextChannel.mutate({ id: selectedTextChannel?.id! });
+    window.location.href = `/${server.id}`;
   }
 
   function handleDeleteVoiceChannel() {
@@ -154,7 +168,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           }}
           className={styles.server_name}
         >
-          {server.name}
+          {serverName !== "" ? serverName : server.name}
         </p>
         <ChannelList
           setSelectedTextChannel={setSelectedTextChannel}

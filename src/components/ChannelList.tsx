@@ -110,6 +110,21 @@ const ChannelList: FC<Props> = ({
       );
     });
   }, []);
+  const updateVoiceChannel = useCallback((incoming: VoiceChannel[]) => {
+    setVoiceChannel((current) => {
+      const map: Record<VoiceChannel["id"], VoiceChannel> = {};
+      for (const chan of current ?? []) {
+        for (const inc of incoming ?? []) {
+          if (chan.id === inc.id) map[chan.id] = inc;
+        }
+      }
+
+      return Object.values(map).sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
+  }, []);
 
   useEffect(() => {
     const textChannels = textChannelQuery.data?.pages
@@ -165,7 +180,7 @@ const ChannelList: FC<Props> = ({
   });
   trpc.voiceChannel.onJoinChannel.useSubscription(undefined, {
     onData(channel) {
-      addVoiceChannel([channel]);
+      updateVoiceChannel([channel]);
     },
     onError(err) {
       console.error("Subscription error:", err);
@@ -207,7 +222,7 @@ const ChannelList: FC<Props> = ({
                 setVoiceChannelSettingsModalOpen(true);
             }}
             onClick={() => {
-              for (let u of channel.users) {
+              for (let u of channel.users ?? []) {
                 if (u.id === user.id) {
                   leaveVoiceChannel.mutate({
                     userId: user.id,
@@ -238,7 +253,7 @@ const ChannelList: FC<Props> = ({
             </div>
             <div className={styles.vc_users}>
               {(channel.users ?? []).map((user) => (
-                <p>{user.name}</p>
+                <p key={user.id}>{user.name}</p>
               ))}
             </div>
           </div>

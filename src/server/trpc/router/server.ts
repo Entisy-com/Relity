@@ -137,13 +137,17 @@ export const serverRouter = router({
         include: {
           users: {
             include: {
-              bannedon: true,
               adminuser: true,
-              messages: true,
+              bannedon: true,
+              friends: true,
+              friendswith: true,
               mentionedin: true,
-              server: true,
+              messages: true,
               ownerof: true,
               roles: true,
+              server: true,
+              settings: true,
+              voicechannel: true,
             },
           },
           roles: {

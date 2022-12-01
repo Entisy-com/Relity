@@ -23,6 +23,17 @@ export const isServerAThing = async (
   } else {
     serverId = url!.toString();
   }
-  const server = await prisma?.server.findUnique({ where: { id: serverId } });
+  const server = await prisma?.server.findUnique({
+    where: { id: serverId },
+    include: {
+      users: true,
+      owner: true,
+      bannedUser: true,
+      categories: true,
+      roles: true,
+      textchannel: true,
+      voicechannel: true,
+    },
+  });
   return server;
 };

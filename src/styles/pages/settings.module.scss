@@ -65,3 +65,18 @@
   justify-content: center;
   background-color: rgba(128, 128, 128, 0.5);
 }
+
+#delete {
+  color: firebrick;
+  background-color: white;
+  box-shadow: none;
+  background-color: none;
+}
+
+#select {
+  user-select: text;
+}
+
+#click {
+  cursor: pointer;
+}

@@ -1,8 +1,7 @@
-import axios, { AxiosResponse } from "axios";
-import { ChangeEvent, FC, MutableRefObject, useEffect, useState } from "react";
+import { ChangeEvent, FC, MutableRefObject } from "react";
 import styles from "../../styles/components/modal.module.scss";
-import { CDN_BASE_URL } from "../../utils/constants";
 import { trpc } from "../../utils/trpc";
+import CryptoJS from "crypto-js";
 
 type Props = {
   serverId?: string;
@@ -13,20 +12,35 @@ type Props = {
 
 const ModalFileSelect: FC<Props> = ({ serverId, value, rref, fileType }) => {
   const updateServer = trpc.server.updateServer.useMutation();
+
+  const sendFiles = async (files: FileList) => {
+    const formData = new FormData();
+    for (let i = 0; i < (files ?? []).length; i++) {
+      formData.append(files!.item(i)!.name, files!.item(i)!);
+    }
+
+    const response = await fetch("http://localhost:4000/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const json = await response.json();
+
+    if (response.ok) {
+      updateServer.mutate({
+        id: serverId!,
+        pfp: `http://localhost:4200/${json.message[files[0]?.name!].md5}.${
+          json.message[files[0]?.name!].name.split(".")[1]
+        }`,
+      });
+    }
+  };
+
   return (
     <>
       <input
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
-          axios
-            .get<String>(`${CDN_BASE_URL}/${serverId}`)
-            .catch((err) => console.error(err))
-            .then((res) => {
-              if (!res) return;
-              if (res.status === 200) {
-                axios.delete(`${CDN_BASE_URL}/${serverId}`);
-              }
-              updateServer.mutate({ id: serverId!, pfp: "" });
-            });
+          const files = e.target.files;
+          sendFiles(files!);
         }}
         name="test"
         ref={rref}

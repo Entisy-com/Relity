@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 import { Permission } from "@prisma/client";
 
 const ee = new EventEmitter();
-export const userRouter = router({
+export const rolesRouter = router({
   createRole: protectedProcedure
     .input(
       z.object({

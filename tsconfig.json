@@ -16,6 +16,15 @@
     "incremental": true,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.cjs", "**/*.mjs", "tsconfig.server.json"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.cjs",
+    "**/*.mjs",
+    "tsconfig.server.json",
+    "src/fileserver/server.js",
+    "src/middleware/filesPayLoadExists.js"
+  ],
   "exclude": ["node_modules"]
 }

@@ -68,11 +68,11 @@ export const voiceChannelRouter = router({
   leaveChannel: protectedProcedure
     .input(z.object({ userId: z.string(), channelId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const channel = ctx.prisma.voiceChannel.findUnique({
+      const channel = await ctx.prisma.voiceChannel.findUnique({
         where: { id: input.channelId },
       });
       if (!channel) throw new TRPCError({ code: "NOT_FOUND" });
-      const update = ctx.prisma.voiceChannel.update({
+      const update = await ctx.prisma.voiceChannel.update({
         where: {
           id: input.channelId,
         },
@@ -100,11 +100,11 @@ export const voiceChannelRouter = router({
   joinChannel: protectedProcedure
     .input(z.object({ userId: z.string(), channelId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const channel = ctx.prisma.voiceChannel.findUnique({
+      const channel = await ctx.prisma.voiceChannel.findUnique({
         where: { id: input.channelId },
       });
       if (!channel) throw new TRPCError({ code: "NOT_FOUND" });
-      const update = ctx.prisma.voiceChannel.update({
+      const update = await ctx.prisma.voiceChannel.update({
         where: {
           id: input.channelId,
         },

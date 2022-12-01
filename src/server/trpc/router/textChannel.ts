@@ -4,6 +4,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
+import { TRPCError } from "@trpc/server";
 
 const ee = new EventEmitter();
 const defaultChannelSelect = Prisma.validator<Prisma.TextChannelSelect>()({
@@ -64,11 +65,14 @@ export const textChannelRouter = router({
     .mutation(async ({ input, ctx }) => {
       const channel = await ctx.prisma.textChannel.findUnique({
         where: { id: input.id },
+        include: {
+          messages: true,
+        },
       });
-      (channel?.messages ?? []).forEach(async (message) => {
-        await ctx.prisma.message.delete({
-          where: { id: message.id },
-        });
+      if (!channel) throw new TRPCError({ code: "NOT_FOUND" });
+      console.log({ msg: channel.messages });
+      await ctx.prisma.message.deleteMany({
+        where: { textChannelId: input.id },
       });
       const deleteChannel = await ctx.prisma.textChannel.delete({
         where: {

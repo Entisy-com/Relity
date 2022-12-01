@@ -31,6 +31,7 @@ const ServerList: FC<Props> = ({ user }) => {
   );
 
   const utils = trpc.useContext();
+  const [serverName, setServerName] = useState("");
 
   const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
     serverQuery;
@@ -74,6 +75,15 @@ const ServerList: FC<Props> = ({ user }) => {
       console.error("Subscription error:", err);
       // we might have missed a message - invalidate cache
       utils.server.getServers.invalidate();
+    },
+  });
+  trpc.server.onServerUpdate.useSubscription(undefined, {
+    onData(server) {
+      setServerName(server.name);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+      utils.server.getServerById.invalidate();
     },
   });
 
@@ -168,7 +178,11 @@ const ServerList: FC<Props> = ({ user }) => {
                   )}
                 </>
               ) : (
-                <p>{server.name.substring(0, 2)}</p>
+                <p>
+                  {serverName !== ""
+                    ? serverName.substring(0, 2)
+                    : server.name.substring(0, 2)}
+                </p>
               )}
             </div>
           </div>
