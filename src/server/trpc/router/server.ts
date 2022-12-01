@@ -48,7 +48,7 @@ export const serverRouter = router({
   updateServer: protectedProcedure
     .input(
       z.object({
-        serverid: z.string(),
+        id: z.string(),
         name: z.string().optional(),
         pfp: z.string().optional(),
         banner: z.string().optional(),
@@ -56,7 +56,7 @@ export const serverRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const server = await ctx.prisma.server.update({
-        where: { id: input.serverid },
+        where: { id: input.id },
         data: {
           name: input.name,
           pfp: input.pfp,

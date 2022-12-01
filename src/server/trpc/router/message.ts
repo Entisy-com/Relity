@@ -62,6 +62,28 @@ export const messageRouter = router({
       };
     });
   }),
+  deleteMessage: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const message = await ctx.prisma.message.delete({
+        where: { id: input.id },
+      });
+      ee.emit("removeMessage", message);
+      return message;
+    }),
+  onMessageDelete: protectedProcedure.subscription(() => {
+    return observable<Message>((emit) => {
+      const onDelete = (data: Message) => emit.next(data);
+      ee.on("removeMessage", onDelete);
+      return () => {
+        ee.off("removeMessage", onDelete);
+      };
+    });
+  }),
   getMessageById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {

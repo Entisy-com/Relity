@@ -90,6 +90,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const createTextChannel = trpc.textChannel.createChannel.useMutation();
   const createVoiceChannel = trpc.voiceChannel.createChannel.useMutation();
 
+  const UpdateServer = trpc.server.updateServer.useMutation();
   const deleteServer = trpc.server.deleteServer.useMutation();
   const deleteTextChannel = trpc.textChannel.deleteChannel.useMutation();
   const deleteVoiceChannel = trpc.voiceChannel.deleteChannel.useMutation();
@@ -298,7 +299,18 @@ const ServerInfo: FC<Props> = ({ server }) => {
         />
         <ModalText value="Change Name" />
         <ModalInput focus placeholder="Server Name" rref={nameRef} />
-        <ModalButton value="Done!" onClick={() => {}} />
+        <ModalButton
+          value="Done!"
+          onClick={() => {
+            if (!nameRef.current) return;
+            if (!(nameRef.current.value.trim().length > 0)) return;
+            UpdateServer.mutate({
+              id: server.id,
+              name: nameRef.current.value,
+            });
+            setServerInfoModalOpen(false);
+          }}
+        />
         <ModalButton
           type="delete"
           value="Delete Server!"

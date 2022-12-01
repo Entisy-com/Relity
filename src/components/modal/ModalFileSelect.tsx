@@ -25,7 +25,7 @@ const ModalFileSelect: FC<Props> = ({ serverId, value, rref, fileType }) => {
               if (res.status === 200) {
                 axios.delete(`${CDN_BASE_URL}/${serverId}`);
               }
-              updateServer.mutate({ serverid: serverId!, pfp: "" });
+              updateServer.mutate({ id: serverId!, pfp: "" });
             });
         }}
         name="test"
