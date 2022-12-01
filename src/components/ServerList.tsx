@@ -1,4 +1,11 @@
-import type { Server, Session } from "@prisma/client";
+import type {
+  Message,
+  OnlineStatus,
+  Role,
+  Server,
+  UserSettings,
+  VoiceChannel,
+} from "@prisma/client";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
 import Image from "next/image";
@@ -7,11 +14,11 @@ import ModalInput from "./modal/ModalInput";
 import ModalTitle from "./modal/ModalTitle";
 import ModalButton from "./modal/ModalButton";
 import { trpc } from "../utils/trpc";
-import { useSession } from "next-auth/react";
 import { User } from "next-auth";
 import ModalText from "./modal/ModalText";
 import ModalFileSelect from "./modal/ModalFileSelect";
 import ModalImage from "./modal/ModalImage";
+import { useSession } from "next-auth/react";
 
 type Props = {
   user: User;
@@ -40,7 +47,11 @@ const ServerList: FC<Props> = ({ user }) => {
         map[serv.id] = serv;
       }
       for (const serv of incoming ?? []) {
-        map[serv.id] = serv;
+        if (serv.ownerid === user.id) map[serv.id] = serv;
+      }
+      for (const serv of incoming ?? []) {
+        for (let u of serv?.users ?? [])
+          if (u.id === user.id) map[serv.id] = serv;
       }
 
       return Object.values(map).sort(
@@ -128,7 +139,34 @@ const ServerList: FC<Props> = ({ user }) => {
             )}
             <div className={styles.logo}>
               {server.pfp ? (
-                <img src={server.pfp} alt="" width={40} height={40} />
+                <>
+                  {server.pfp.endsWith(".gif") ? (
+                    <>
+                      <img
+                        className={styles.a_pfp}
+                        src={server.pfp}
+                        alt=""
+                        width={40}
+                        height={40}
+                      />
+                      <img
+                        className={styles.pfp}
+                        src={server.pfp.replace(".gif", ".png")}
+                        alt=""
+                        width={40}
+                        height={40}
+                      />
+                    </>
+                  ) : (
+                    <img
+                      className={styles.pfp}
+                      src={server.pfp}
+                      alt=""
+                      width={40}
+                      height={40}
+                    />
+                  )}
+                </>
               ) : (
                 <p>{server.name.substring(0, 2)}</p>
               )}
@@ -154,7 +192,7 @@ const ServerList: FC<Props> = ({ user }) => {
         setOpen={setCreateServerModalOpen}
       >
         <ModalTitle value="Create a Server" />
-        <ModalInput placeholder="Server Name" rref={nameRef} />
+        <ModalInput focus placeholder="Server Name" rref={nameRef} />
         <ModalButton
           value="Create!"
           onClick={() => {
@@ -182,7 +220,7 @@ const ServerList: FC<Props> = ({ user }) => {
           fileType=".png, .jpg, .jpeg"
         />
         <ModalText value="Change Name" />
-        <ModalInput placeholder="Server Name" rref={nameRef} />
+        <ModalInput focus placeholder="Server Name" rref={nameRef} />
         <ModalButton
           value="Done!"
           onClick={() => {
@@ -208,7 +246,7 @@ const ServerList: FC<Props> = ({ user }) => {
         setOpen={setDeleteServerModalOpen}
       >
         <ModalTitle value={selectedServer?.name!} />
-        <ModalInput placeholder="Server Name" rref={deleteRef} />
+        <ModalInput focus placeholder="Server Name" rref={deleteRef} />
         <ModalInput placeholder="Repeat Server Name" rref={repeatDeleteRef} />
         <ModalButton
           type="delete"

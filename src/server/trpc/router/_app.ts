@@ -5,12 +5,14 @@ import {
   messageRouter,
   serverRouter,
   userRouter,
+  voiceChannelRouter,
 } from "./";
 
 export const appRouter = router({
   auth: authRouter,
   server: serverRouter,
   textChannel: textChannelRouter,
+  voiceChannel: voiceChannelRouter,
   message: messageRouter,
   user: userRouter,
 });

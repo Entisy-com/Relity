@@ -47,6 +47,7 @@ model VoiceChannel {
   categoryid  String?
   permissions Permission[]
   position    Int          @default(0)
+  users       User[]
 }
 
 model Category {
@@ -61,18 +62,18 @@ model Category {
 }
 
 model Message {
-  id              String       @id @default(cuid())
+  id              String      @id @default(cuid())
   content         String
-  author          User         @relation(fields: [authorId], references: [id])
+  author          User        @relation(fields: [authorId], references: [id])
   authorId        String
-  color           String?      @default("#fff")
-  backgroundColor String?      @default("#00000000")
+  color           String?     @default("#fff")
+  backgroundColor String?     @default("#00000000")
   mentionedRoles  Role[]
-  mentionedUser   User[]       @relation(name: "mentions")
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  textChannel     TextChannel? @relation(fields: [textChannelId], references: [id])
-  textChannelId   String?
+  mentionedUser   User[]      @relation(name: "mentions")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  textChannel     TextChannel @relation(fields: [textChannelId], references: [id])
+  textChannelId   String
 }
 
 model Role {
@@ -108,11 +109,13 @@ model Server {
 }
 
 enum Permission {
-  READ
-  SEND_MESSAGES
-  KICK
-  BAN
+  BAN_MEMBERS
+  KICK_MEMBERS
+  MANAGE_MEMBERS
   MANAGE_MESSAGES
+  MANAGE_SERVER
+  READ_MESSAGES
+  SEND_MESSAGES
 }
 
 // Necessary for Next auth
@@ -145,24 +148,28 @@ model Session {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String?
-  email         String?       @unique
-  emailVerified DateTime?
-  image         String?
-  status        OnlineStatus?
-  accounts      Account[]
-  sessions      Session[]
-  adminuser     AdminUser?
-  messages      Message[]
-  mentionedin   Message[]     @relation(name: "mentions")
-  server        Server[]      @relation(name: "users")
-  bannedon      Server[]      @relation(name: "bannedusers")
-  ownerof       Server[]
-  roles         Role[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  settings      UserSettings?
+  id             String        @id @default(cuid())
+  name           String
+  email          String        @unique
+  emailVerified  DateTime?
+  image          String
+  status         OnlineStatus  @default(OFFLINE)
+  accounts       Account[]
+  sessions       Session[]
+  adminuser      AdminUser?
+  messages       Message[]
+  mentionedin    Message[]     @relation(name: "mentions")
+  server         Server[]      @relation(name: "users")
+  bannedon       Server[]      @relation(name: "bannedusers")
+  ownerof        Server[]
+  roles          Role[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  settings       UserSettings?
+  voicechannel   VoiceChannel? @relation(fields: [voicechannelid], references: [id])
+  voicechannelid String?       @map("voicechannelid")
+  friends        User[]        @relation(name: "friends")
+  friendswith    User[]        @relation(name: "friends")
 }
 
 model UserSettings {

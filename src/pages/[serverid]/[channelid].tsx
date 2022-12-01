@@ -30,42 +30,74 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     id: server.id,
   });
 
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+  const createMessage = trpc.message.createMessage.useMutation();
+
   const messageQuery = trpc.message.getMessages.useInfiniteQuery(
     { channelId: channel.id },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
 
-  const [updated, setUpdated] = useState(false);
-  const [messages, setMessages] = useState(() => {
+  const [message, setMessage] = useState(() => {
     const messages = messageQuery.data?.pages
       .map((page) => page.messages)
       .flat();
     return messages;
   });
 
-  const messageRef = useRef<HTMLInputElement>(null);
-  const messageMutation = trpc.message.createMessage.useMutation();
+  const addMessage = useCallback((incoming?: Message[]) => {
+    setMessage((current) => {
+      const map: Record<Message["id"], Message> = {};
+      for (const mess of current ?? []) {
+        map[mess.id] = mess;
+      }
+      for (const mess of incoming ?? []) {
+        map[mess.id] = mess;
+      }
+      for (const mess of incoming ?? []) {
+        if (mess.textChannel?.id === channel.id) map[mess.id] = mess;
+      }
+
+      return Object.values(map).sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    const messages = messageQuery.data?.pages
+      .map((page) => page.messages)
+      .flat();
+    addMessage(messages);
+  }, [messageQuery.data?.pages, addMessage]);
+
+  trpc.message.onMessageCreate.useSubscription(undefined, {
+    onData(message) {
+      addMessage([message]);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+      utils.message.getMessages.invalidate();
+    },
+  });
 
   function handleSendMessage(e: any) {
     e.preventDefault();
     if (!messageRef.current) return;
     if (!(messageRef.current.value.trim().length > 0)) return;
-    messageMutation.mutate({
+    createMessage.mutate({
       content: messageRef.current.value,
       channelId: channel.id,
       authorId: user?.id!,
     });
-    setUpdated(true);
+    messageRef.current.value = "";
+    setTimeout(() => {
+      const messages = document.getElementsByClassName(`${styles.message}`);
+      const latestMessage = messages[messages.length - 1];
+      latestMessage?.scrollIntoView();
+    }, 250);
   }
-
-  // useEffect(() => {
-  //   const query = trpc.message.getMessages.useInfiniteQuery({
-  //     channelId: channel.id,
-  //   });
-  //   const msgs = query.data?.pages.map((page) => page.messages).flat();
-  //   setMessages(msgs);
-  //   setUpdated(false);
-  // }, [updated, setUpdated]);
 
   if (!allData) return <></>;
   if (!user) return <></>;
@@ -76,17 +108,43 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
         <div className={styles.chat}>
           <div className={styles.messages}>
             <>
-              {(messages ?? []).map((message) => {
-                <p>{message.content}</p>;
-              })}
+              {(message ?? []).map((message) => (
+                <div className={styles.message} key={message.id}>
+                  <img
+                    className={styles.pfp}
+                    src={message.author?.image ?? ""}
+                    alt=""
+                    width={30}
+                    height={30}
+                  />
+                  <div className={styles.content}>
+                    <p className={styles.name}>{message.author?.name}</p>
+                    <p className={styles.msg}>{message.content}</p>
+                  </div>
+                </div>
+              ))}
             </>
           </div>
-          <div className={styles.input}>
-            <form onSubmit={(e) => handleSendMessage(e)}>
-              <input type="text" placeholder="Message..." ref={messageRef} />
-              <input type="submit" value="Send" />
-            </form>
-          </div>
+          <form className={styles.input} onSubmit={(e) => handleSendMessage(e)}>
+            <textarea
+              onKeyDown={(e) => {
+                if (e.shiftKey && e.key == "Enter") return;
+                if (e.key == "Enter") {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                  return;
+                }
+              }}
+              onContextMenu={(e) => {
+                // TODO: Jonas stuff
+              }}
+              rows={1}
+              className={styles.input_field}
+              placeholder="Message..."
+              ref={messageRef}
+            />
+            <input className={styles.input_button} type="submit" value="Send" />
+          </form>
         </div>
         <div className={styles.info}>
           <ServerInfo server={allData} />

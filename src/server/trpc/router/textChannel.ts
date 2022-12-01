@@ -14,6 +14,9 @@ const defaultChannelSelect = Prisma.validator<Prisma.TextChannelSelect>()({
   serverid: true,
   category: true,
   position: true,
+  categoryid: true,
+  permissions: true,
+  messages: true,
 });
 export const textChannelRouter = router({
   createChannel: protectedProcedure
@@ -56,6 +59,34 @@ export const textChannelRouter = router({
       });
       return channel;
     }),
+  deleteChannel: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const channel = await ctx.prisma.textChannel.findUnique({
+        where: { id: input.id },
+      });
+      (channel?.messages ?? []).forEach(async (message) => {
+        await ctx.prisma.message.delete({
+          where: { id: message.id },
+        });
+      });
+      const deleteChannel = await ctx.prisma.textChannel.delete({
+        where: {
+          id: input.id,
+        },
+      });
+      ee.emit("deleteChannel", deleteChannel);
+      return deleteChannel;
+    }),
+  onChannelDelete: protectedProcedure.subscription(() => {
+    return observable<TextChannel>((emit) => {
+      const onDelete = (data: TextChannel) => emit.next(data);
+      ee.on("deleteChannel", onDelete);
+      return () => {
+        ee.off("deleteChannel", onDelete);
+      };
+    });
+  }),
   getChannels: protectedProcedure
     .input(
       z.object({

@@ -9,11 +9,18 @@ const ee = new EventEmitter();
 const defaultServerSelect = Prisma.validator<Prisma.ServerSelect>()({
   id: true,
   name: true,
+  users: true,
+  roles: true,
+  textchannel: true,
+  voicechannel: true,
+  owner: true,
   ownerid: true,
   createdAt: true,
   updatedAt: true,
+  bannedUser: true,
   pfp: true,
   banner: true,
+  categories: true,
 });
 
 export const serverRouter = router({
@@ -139,14 +146,11 @@ export const serverRouter = router({
               roles: true,
             },
           },
-          bannedUser: true,
-          owner: true,
           roles: {
             include: {
               users: true,
             },
           },
-          textchannel: true,
         },
       });
       return server;

@@ -4,10 +4,11 @@ import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { Message, Prisma } from "@prisma/client";
 
-const defaultServerSelect = Prisma.validator<Prisma.MessageSelect>()({
+const defaultMessageSelect = Prisma.validator<Prisma.MessageSelect>()({
   id: true,
   content: true,
   author: true,
+  authorId: true,
   color: true,
   backgroundColor: true,
   mentionedRoles: true,
@@ -15,6 +16,7 @@ const defaultServerSelect = Prisma.validator<Prisma.MessageSelect>()({
   updatedAt: true,
   createdAt: true,
   textChannel: true,
+  textChannelId: true,
 });
 
 const ee = new EventEmitter();
@@ -30,7 +32,7 @@ export const messageRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const message = ctx.prisma.message.create({
+      const message = await ctx.prisma.message.create({
         data: {
           content: input.content,
           color: input.color,
@@ -43,6 +45,9 @@ export const messageRouter = router({
           textChannel: {
             connect: { id: input.channelId },
           },
+        },
+        include: {
+          author: true,
         },
       });
       ee.emit("addMessage", message);
@@ -84,7 +89,7 @@ export const messageRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const messages = await ctx.prisma.message.findMany({
-        select: defaultServerSelect,
+        select: defaultMessageSelect,
         take: limit + 1,
         where: { textChannelId: input.channelId },
         cursor: cursor
@@ -96,7 +101,6 @@ export const messageRouter = router({
       });
       let nextCursor: typeof cursor | undefined = undefined;
       if (messages.length > limit) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const nextMessage = messages.pop()!;
         nextCursor = nextMessage.id;
       }

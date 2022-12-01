@@ -1,10 +1,8 @@
 import { FC, useEffect } from "react";
-import { object } from "zod";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {
   open: any;
-  // eslint-disable-next-line @typescript-eslint/ban-types
   setOpen: Function;
   children?: JSX.Element | JSX.Element[];
   ref?: any;
@@ -34,7 +32,11 @@ const Modal: FC<Props> = ({
   }, [open, setOpen]);
 
   return (
-    <>
+    <div
+      className={styles.wrapper}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.stopPropagation()}
+    >
       {open && (
         <form
           onSubmit={() => {
@@ -63,7 +65,7 @@ const Modal: FC<Props> = ({
           {children}
         </form>
       )}
-    </>
+    </div>
   );
 };
 
