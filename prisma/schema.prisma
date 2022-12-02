@@ -87,7 +87,7 @@ model Role {
     updatedAt   DateTime     @updatedAt
     mentionedIn Message[]
     visible     Boolean
-    color       String
+    color       String       @default("fff")
     position    Int          @default(0)
 }
 

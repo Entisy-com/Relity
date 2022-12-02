@@ -25,8 +25,6 @@ app.use(
 
 app.get("/", (req, res) => {});
 
-app.get("/getServerPfp", (req, res) => {});
-
 app.post(
   "/upload",
   fileUpload({ createParentPath: true }),
