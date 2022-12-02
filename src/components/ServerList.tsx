@@ -1,11 +1,4 @@
-import type {
-  Message,
-  OnlineStatus,
-  Role,
-  Server,
-  UserSettings,
-  VoiceChannel,
-} from "@prisma/client";
+import type { Server } from "@prisma/client";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
 import Image from "next/image";

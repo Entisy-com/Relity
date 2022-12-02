@@ -95,6 +95,7 @@ export const messageRouter = router({
           author: true,
           mentionedUser: true,
           mentionedRoles: true,
+          textChannel: true,
         },
       });
       return server;

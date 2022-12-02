@@ -1,5 +1,4 @@
 import {
-  AdminUser,
   Message,
   Role,
   Server,
@@ -10,10 +9,8 @@ import {
   OnlineStatus,
   Category,
 } from "@prisma/client";
-import { channel } from "diagnostics_channel";
 import { useSession } from "next-auth/react";
-import { userAgent } from "next/server";
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
@@ -164,7 +161,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           }}
           onContextMenu={(e) => {
             e.preventDefault();
-            setServerInfoModalOpen(true);
+            if (server.ownerid === user.id) setServerInfoModalOpen(true);
           }}
           className={styles.server_name}
         >

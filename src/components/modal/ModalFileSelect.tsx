@@ -42,16 +42,10 @@ const ModalFileSelect: FC<Props> = ({ serverId, value, rref, fileType }) => {
           const files = e.target.files;
           sendFiles(files!);
         }}
-        name="test"
         ref={rref}
         className={styles.file_select}
         type="file"
         accept={fileType}
-      />
-      <input
-        type="submit"
-        className={styles.file_select_submit}
-        value={value}
       />
     </>
   );

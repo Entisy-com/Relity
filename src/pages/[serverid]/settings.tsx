@@ -21,17 +21,34 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
   const sortRoles = (a: Role, b: Role) => {
     return a.position.toString().localeCompare(b.position.toString());
   };
-
+  const createAt = new Date(server.createdAt);
+  const dateString = `${createAt.getDate()}.${
+    createAt.getMonth() + 1
+  }.${createAt.getFullYear()} ${createAt
+    .getHours()
+    .toString()
+    .padStart(2, "0")}:${createAt
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}:${createAt.getSeconds().toString().padStart(2, "0")}`;
   return (
     <div className={styles.wrapper}>
       <div className={styles.options}>
         <div id="info" className={styles.option}>
           <h1 className={styles.option_title}>Info</h1>
           <div>
-            <h3>Name:</h3>
-            <h5>{server.name!}</h5>
-            <h3>Owner:</h3>
-            <h5>{server.owner.name}</h5>
+            <h3>Name: {server.name!}</h3>
+            <h3>Owner: {server.owner.name}</h3>
+            <h3
+              title={`Textchannel:${
+                server.textchannel.length ?? 0
+              }\nVoicechannel: ${server.voicechannel.length ?? 0}`}
+            >
+              Channel count:{" "}
+              {server.textchannel.length + server.voicechannel.length ?? 0}
+            </h3>
+            <h3>Member count: {server.users.length ?? 0}</h3>
+            <h3>Created at: {dateString}</h3>
             {/* TODO: Add Transfer ownership modal  */}
           </div>
         </div>
@@ -87,7 +104,6 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
                 {server.owner.id}
               </span>
             </h3>
-            <h3>Member count: {server.users.length ?? 0}</h3>
           </div>
         </div>
       </div>

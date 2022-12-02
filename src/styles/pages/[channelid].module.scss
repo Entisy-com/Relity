@@ -77,3 +77,23 @@
     background-color: rgba(220, 20, 60, 0.6);
   }
 }
+
+.context_menu {
+  position: fixed;
+  z-index: 10000;
+  width: 150px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
+  transform-origin: top left;
+  transition: transform 0.1s ease;
+  &_item {
+    padding: 8px 10px;
+    font-size: 15px;
+    color: #eee;
+    cursor: pointer;
+    border-radius: inherit;
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+  }
+}

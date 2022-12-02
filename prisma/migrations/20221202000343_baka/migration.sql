@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Permission" AS ENUM ('READ', 'SEND_MESSAGES', 'KICK', 'BAN', 'MANAGE_MESSAGES');
+CREATE TYPE "Permission" AS ENUM ('BAN_MEMBERS', 'KICK_MEMBERS', 'MANAGE_MEMBERS', 'MANAGE_MESSAGES', 'MANAGE_SERVER', 'READ_MESSAGES', 'SEND_MESSAGES');
 
 -- CreateEnum
 CREATE TYPE "OnlineStatus" AS ENUM ('ONLINE', 'AWAY', 'DND', 'OFFLINE');
@@ -21,8 +21,36 @@ CREATE TABLE "TextChannel" (
     "serverid" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "categoryid" TEXT,
+    "permissions" "Permission"[],
+    "position" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "TextChannel_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "VoiceChannel" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "serverid" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "categoryid" TEXT,
+    "permissions" "Permission"[],
+    "position" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "VoiceChannel_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Category" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "serverid" TEXT NOT NULL,
+    "permissions" "Permission"[],
+    "position" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -34,7 +62,7 @@ CREATE TABLE "Message" (
     "backgroundColor" TEXT DEFAULT '#00000000',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "textChannelId" TEXT,
+    "textChannelId" TEXT NOT NULL,
 
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
@@ -48,6 +76,8 @@ CREATE TABLE "Role" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "visible" BOOLEAN NOT NULL,
+    "color" TEXT NOT NULL,
+    "position" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
 );
@@ -98,15 +128,24 @@ CREATE TABLE "Session" (
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "name" TEXT,
-    "email" TEXT,
+    "name" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
     "emailVerified" TIMESTAMP(3),
-    "image" TEXT,
-    "status" "OnlineStatus",
+    "image" TEXT NOT NULL,
+    "status" "OnlineStatus" NOT NULL DEFAULT 'OFFLINE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "voicechannelid" TEXT,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserSettings" (
+    "id" TEXT NOT NULL,
+    "userid" TEXT NOT NULL,
+
+    CONSTRAINT "UserSettings_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -146,11 +185,14 @@ CREATE TABLE "_bannedusers" (
     "B" TEXT NOT NULL
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "AdminUser_userid_key" ON "AdminUser"("userid");
+-- CreateTable
+CREATE TABLE "_friends" (
+    "A" TEXT NOT NULL,
+    "B" TEXT NOT NULL
+);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "TextChannel_serverid_key" ON "TextChannel"("serverid");
+CREATE UNIQUE INDEX "AdminUser_userid_key" ON "AdminUser"("userid");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Role_serverid_key" ON "Role"("serverid");
@@ -163,6 +205,9 @@ CREATE UNIQUE INDEX "Session_sessionToken_key" ON "Session"("sessionToken");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserSettings_userid_key" ON "UserSettings"("userid");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token");
@@ -200,6 +245,12 @@ CREATE UNIQUE INDEX "_bannedusers_AB_unique" ON "_bannedusers"("A", "B");
 -- CreateIndex
 CREATE INDEX "_bannedusers_B_index" ON "_bannedusers"("B");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "_friends_AB_unique" ON "_friends"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_friends_B_index" ON "_friends"("B");
+
 -- AddForeignKey
 ALTER TABLE "AdminUser" ADD CONSTRAINT "AdminUser_userid_fkey" FOREIGN KEY ("userid") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -207,10 +258,22 @@ ALTER TABLE "AdminUser" ADD CONSTRAINT "AdminUser_userid_fkey" FOREIGN KEY ("use
 ALTER TABLE "TextChannel" ADD CONSTRAINT "TextChannel_serverid_fkey" FOREIGN KEY ("serverid") REFERENCES "Server"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "TextChannel" ADD CONSTRAINT "TextChannel_categoryid_fkey" FOREIGN KEY ("categoryid") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "VoiceChannel" ADD CONSTRAINT "VoiceChannel_serverid_fkey" FOREIGN KEY ("serverid") REFERENCES "Server"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "VoiceChannel" ADD CONSTRAINT "VoiceChannel_categoryid_fkey" FOREIGN KEY ("categoryid") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Category" ADD CONSTRAINT "Category_serverid_fkey" FOREIGN KEY ("serverid") REFERENCES "Server"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Message" ADD CONSTRAINT "Message_textChannelId_fkey" FOREIGN KEY ("textChannelId") REFERENCES "TextChannel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Message" ADD CONSTRAINT "Message_textChannelId_fkey" FOREIGN KEY ("textChannelId") REFERENCES "TextChannel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Role" ADD CONSTRAINT "Role_serverid_fkey" FOREIGN KEY ("serverid") REFERENCES "Server"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -223,6 +286,12 @@ ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_voicechannelid_fkey" FOREIGN KEY ("voicechannelid") REFERENCES "VoiceChannel"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserSettings" ADD CONSTRAINT "UserSettings_userid_fkey" FOREIGN KEY ("userid") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_MessageToRole" ADD CONSTRAINT "_MessageToRole_A_fkey" FOREIGN KEY ("A") REFERENCES "Message"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -253,3 +322,9 @@ ALTER TABLE "_bannedusers" ADD CONSTRAINT "_bannedusers_A_fkey" FOREIGN KEY ("A"
 
 -- AddForeignKey
 ALTER TABLE "_bannedusers" ADD CONSTRAINT "_bannedusers_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_friends" ADD CONSTRAINT "_friends_A_fkey" FOREIGN KEY ("A") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_friends" ADD CONSTRAINT "_friends_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
