@@ -1,6 +1,6 @@
 .messages {
   width: 100%;
-  height: calc(100vh - 90px);
+  height: calc(100vh - 130px);
   overflow-y: scroll;
 }
 .message {
@@ -96,4 +96,13 @@
       background-color: rgba(0, 0, 0, 0.6);
     }
   }
+}
+
+.tc_name {
+  background-color: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 10px -2px black;
+  width: calc(100% - 10px);
+  padding-left: 10px;
+  height: 40px;
+  font-size: 24px;
 }

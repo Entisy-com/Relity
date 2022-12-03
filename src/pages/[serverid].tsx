@@ -1,4 +1,3 @@
-import { Server, User } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
 import Profile from "../components/Profile";
 import ServerList from "../components/ServerList";
@@ -7,6 +6,7 @@ import { isServerAThing } from "./api/v1/getServer";
 import styles from "../styles/pages/[serverid].module.scss";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
 import ServerInfo from "../components/ServerInfo";
+import { Server, User } from "../types";
 
 type Props = {
   server: Server;

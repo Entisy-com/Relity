@@ -1,17 +1,9 @@
-import {
-  Message,
-  Role,
-  Server,
-  TextChannel,
-  VoiceChannel,
-  User,
-  UserSettings,
-  OnlineStatus,
-  Category,
-} from "@prisma/client";
+import axios from "axios";
 import { useSession } from "next-auth/react";
 import { FC, useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
+import { Server, TextChannel, User, VoiceChannel } from "../types";
+import { CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
 import Modal from "./modal/Modal";
@@ -24,41 +16,7 @@ import ModalTitle from "./modal/ModalTitle";
 import UserList from "./UserList";
 
 type Props = {
-  server: Server & {
-    id: string;
-    name: string;
-    textchannel: TextChannel[];
-    voicechannel: VoiceChannel[];
-    owner: User;
-    ownerid: string;
-    createdAt: Date;
-    updatedAt: Date;
-    bannedUser: User[];
-    pfp: string | null;
-    banner: string | null;
-    categories: Category[];
-    users: (User & {
-      id: string;
-      name: string;
-      email: string;
-      image: string | null;
-      status: OnlineStatus;
-      messages: Message[];
-      server: Server[];
-      bannedon: Server[];
-      ownerof: Server[];
-      roles: Role[];
-      settings: UserSettings | null;
-      voicechannel: VoiceChannel | null;
-      updatedAt: Date;
-      createdAt: Date;
-      friends: User[];
-      friendswith: User[];
-    })[];
-    roles: (Role & {
-      users: User[];
-    })[];
-  };
+  server: Server;
 };
 
 const ServerInfo: FC<Props> = ({ server }) => {
@@ -79,6 +37,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
   const [serverName, setServerName] = useState("");
+  const [serverImage, setServerImage] = useState("");
 
   const [selectedTextChannel, setSelectedTextChannel] = useState<TextChannel>();
   const [selectedVoiceChannel, setSelectedVoiceChannel] =
@@ -87,7 +46,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
 
   const createTextChannel = trpc.textChannel.createChannel.useMutation();
   const createVoiceChannel = trpc.voiceChannel.createChannel.useMutation();
-  const UpdateServer = trpc.server.updateServer.useMutation();
+  const updateServer = trpc.server.updateServer.useMutation();
   const deleteServer = trpc.server.deleteServer.useMutation();
   const deleteTextChannel = trpc.textChannel.deleteChannel.useMutation();
   const deleteVoiceChannel = trpc.voiceChannel.deleteChannel.useMutation();
@@ -101,6 +60,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
   trpc.server.onServerUpdate.useSubscription(undefined, {
     onData(server) {
       setServerName(server.name);
+      setServerImage(server.pfp ?? "");
     },
     onError(err) {
       console.error("Subscription error:", err);
@@ -148,6 +108,28 @@ const ServerInfo: FC<Props> = ({ server }) => {
     if (deleteRef.current.value.trim() !== selectedVoiceChannel?.name.trim())
       return;
     deleteVoiceChannel.mutate({ id: selectedVoiceChannel?.id! });
+  }
+
+  async function handleChangeImage(file: File) {
+    const formData = new FormData();
+    formData.append(file.name, file);
+
+    const { data, status } = await axios.post(
+      `${CDN_API_URL}/upload`,
+      formData
+    );
+
+    const pfp = `${CDN_BASE_URL}/${data.message[file.name].md5}.${
+      data.message[file.name].name.split(".")[1]
+    }`;
+
+    if (status === 200) {
+      updateServer.mutate({
+        id: server.id,
+        pfp: pfp,
+      });
+    }
+    setServerImage(pfp);
   }
 
   if (!user) return <></>;
@@ -302,11 +284,21 @@ const ServerInfo: FC<Props> = ({ server }) => {
         setOpen={setServerInfoModalOpen}
       >
         <ModalTitle value={server?.name!} />
-        {server?.pfp ? <ModalImage size={100} src={server?.pfp!} /> : <></>}
+        {serverImage !== "" ? (
+          <ModalImage size={100} src={serverImage!} />
+        ) : server?.pfp ? (
+          <ModalImage size={100} src={server?.pfp!} />
+        ) : (
+          <></>
+        )}
+
         <ModalFileSelect
           serverId={server?.id!}
           value="Set Picture"
           fileType=".png, .jpg, .jpeg"
+          onChange={(file) => {
+            handleChangeImage(file);
+          }}
         />
         <ModalText value="Change Name" />
         <ModalInput focus placeholder="Server Name" rref={nameRef} />
@@ -315,7 +307,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           onClick={() => {
             if (!nameRef.current) return;
             if (!(nameRef.current.value.trim().length > 0)) return;
-            UpdateServer.mutate({
+            updateServer.mutate({
               id: server.id,
               name: nameRef.current.value,
             });

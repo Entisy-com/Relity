@@ -5,6 +5,7 @@ import ModalTitle from "./modal/ModalTitle";
 import styles from "../styles/components/profile.module.scss";
 import ModalButton from "./modal/ModalButton";
 import ModalText from "./modal/ModalText";
+import { BASE_URL } from "../utils/constants";
 
 const Profile = () => {
   const session = useSession();
@@ -15,7 +16,14 @@ const Profile = () => {
 
   return (
     <>
-      <div className={styles.wrapper} onClick={() => setOpen(true)}>
+      <div
+        className={styles.wrapper}
+        onClick={() => {
+          if (window.location.href !== `${BASE_URL}/`)
+            window.location.href = "..";
+        }}
+        onContextMenu={() => setOpen(true)}
+      >
         {user.image ? (
           <div className={styles.image}>
             <img

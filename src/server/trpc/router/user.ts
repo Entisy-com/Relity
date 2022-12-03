@@ -2,25 +2,9 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { TRPCError } from "@trpc/server";
-import { Prisma, User } from "@prisma/client";
 import { observable } from "@trpc/server/observable";
+import { User } from "../../../types";
 
-const defaultUserSelect = Prisma.validator<Prisma.UserSelect>()({
-  id: true,
-  name: true,
-  email: true,
-  image: true,
-  status: true,
-  messages: true,
-  server: true,
-  bannedon: true,
-  ownerof: true,
-  roles: true,
-  settings: true,
-  voicechannel: true,
-  updatedAt: true,
-  createdAt: true,
-});
 const ee = new EventEmitter();
 export const userRouter = router({
   joinServer: protectedProcedure
@@ -59,8 +43,22 @@ export const userRouter = router({
     .input(z.object({ userId: z.string() }))
     .query(async ({ input, ctx }) => {
       const user = await ctx.prisma.user.findUnique({
-        select: defaultUserSelect,
         where: { id: input.userId },
+        include: {
+          accounts: true,
+          adminuser: true,
+          bannedon: true,
+          friends: true,
+          friendsWith: true,
+          mentionedin: true,
+          messages: true,
+          ownerof: true,
+          roles: true,
+          server: true,
+          sessions: true,
+          settings: true,
+          voicechannel: true,
+        },
       });
       return { user };
     }),

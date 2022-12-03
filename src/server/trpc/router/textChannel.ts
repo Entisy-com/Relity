@@ -1,24 +1,13 @@
 import { Prisma } from "@prisma/client";
-import type { TextChannel } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
+import { TextChannel } from "../../../types";
 
 const ee = new EventEmitter();
-const defaultChannelSelect = Prisma.validator<Prisma.TextChannelSelect>()({
-  id: true,
-  name: true,
-  createdAt: true,
-  updatedAt: true,
-  serverid: true,
-  category: true,
-  position: true,
-  categoryid: true,
-  permissions: true,
-  messages: true,
-});
+
 export const textChannelRouter = router({
   createChannel: protectedProcedure
     .input(z.object({ name: z.string(), serverid: z.string() }))
@@ -70,9 +59,12 @@ export const textChannelRouter = router({
         },
       });
       if (!channel) throw new TRPCError({ code: "NOT_FOUND" });
-      console.log({ msg: channel.messages });
-      await ctx.prisma.message.deleteMany({
-        where: { textChannelId: input.id },
+      (channel.messages ?? []).forEach(async (message) => {
+        await ctx.prisma.message.delete({
+          where: {
+            id: message.id,
+          },
+        });
       });
       const deleteChannel = await ctx.prisma.textChannel.delete({
         where: {
@@ -103,9 +95,13 @@ export const textChannelRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const channel = await ctx.prisma.textChannel.findMany({
-        select: defaultChannelSelect,
         take: limit + 1,
         where: { serverid: input.serverid },
+        include: {
+          category: true,
+          messages: true,
+          server: true,
+        },
         cursor: cursor
           ? {
               id: cursor,

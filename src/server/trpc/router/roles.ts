@@ -3,9 +3,11 @@ import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
-import { Permission } from "@prisma/client";
+import { Permission, Prisma } from "@prisma/client";
+import { Role } from "../../../types";
 
 const ee = new EventEmitter();
+
 export const rolesRouter = router({
   createRole: protectedProcedure
     .input(
@@ -18,12 +20,22 @@ export const rolesRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      const server = await ctx.prisma.server.findUnique({
+        where: {
+          id: input.serverId,
+        },
+        include: {
+          roles: true,
+        },
+      });
+      if (!server) throw new TRPCError({ code: "NOT_FOUND" });
       const role = await ctx.prisma.role.create({
         data: {
           name: input.name,
           visible: input.visible,
           color: input.color,
           permissions: input.permissions,
+          position: server.roles.length,
           server: {
             connect: {
               id: input.serverId,
@@ -31,8 +43,18 @@ export const rolesRouter = router({
           },
         },
       });
+      ee.emit("createRole", role);
       return role;
     }),
+  onRoleCreate: protectedProcedure.subscription(() => {
+    return observable<Role>((emit) => {
+      const onCreate = (data: Role) => emit.next(data);
+      ee.on("createRole", onCreate);
+      return () => {
+        ee.off("createRole", onCreate);
+      };
+    });
+  }),
   updateRole: protectedProcedure
     .input(
       z.object({
@@ -53,8 +75,18 @@ export const rolesRouter = router({
           permissions: input.permissions,
         },
       });
+      ee.emit("updateRole", update);
       return update;
     }),
+  onRoleUpdate: protectedProcedure.subscription(() => {
+    return observable<Role>((emit) => {
+      const onUpdate = (data: Role) => emit.next(data);
+      ee.on("updateRole", onUpdate);
+      return () => {
+        ee.off("updateRole", onUpdate);
+      };
+    });
+  }),
   deleteRole: protectedProcedure
     .input(z.object({ roleid: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -77,5 +109,15 @@ export const rolesRouter = router({
       const deletedRole = await ctx.prisma.role.delete({
         where: { id: input.roleid },
       });
+      ee.emit("deleteRole", deletedRole);
     }),
+  onRoleDelete: protectedProcedure.subscription(() => {
+    return observable<Role>((emit) => {
+      const onDelete = (data: Role) => emit.next(data);
+      ee.on("deleteRole", onDelete);
+      return () => {
+        ee.off("deleteRole", onDelete);
+      };
+    });
+  }),
 });

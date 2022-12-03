@@ -1,6 +1,6 @@
-import { Role, User } from "@prisma/client";
 import { FC } from "react";
 import styles from "../styles/components/userList.module.scss";
+import { Role, User } from "@prisma/client";
 
 type Props = {
   ownerId: string;

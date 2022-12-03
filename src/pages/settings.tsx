@@ -1,8 +1,7 @@
-import { Account } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
 import { DefaultSession } from "next-auth";
 import { signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "../components/modal/Modal";
 import ModalButton from "../components/modal/ModalButton";
 import ModalInput from "../components/modal/ModalInput";

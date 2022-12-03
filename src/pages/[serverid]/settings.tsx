@@ -1,6 +1,5 @@
-import { Server, User, Role } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import styles from "../../styles/pages/settings.module.scss";
 import serverStyles from "../../styles/pages/serverSettings.module.scss";
 import { trpc } from "../../utils/trpc";
@@ -8,28 +7,66 @@ import { isServerAThing } from "../api/v1/getServer";
 import Modal from "../../components/modal/Modal";
 import ModalInput from "../../components/modal/ModalInput";
 import ModalButton from "../../components/modal/ModalButton";
+import ModalTitle from "../../components/modal/ModalTitle";
+import ModalDropdown from "../../components/modal/ModalDropdown";
+import { Role, User, Permission } from "@prisma/client";
+import { PermissionOptions, Server } from "../../types";
+import ModalCheckbox from "../../components/modal/ModalCheckbox";
+import Head from "next/head";
+import { ModalColorPicker } from "../../components/modal";
 
 type Props = {
   server: Server;
 };
 
 const ServerSettings: NextPage<Props> = ({ server }) => {
+  const [selectedRole, setSelectedRole] = useState<Role>();
+  const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [createRoleModalOpen, setCreateRoleModalOpen] = useState(false);
+  const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
+  const [roleVisibility, setRoleVisibility] = useState(true);
+  const [roleColor, setRoleColor] = useState("#ffffff");
+  const [transferOwnershipModalOpen, setTransferOwnershipModalOpen] =
+    useState(false);
+
+  const [transferOwnershipUser, setTransferOwnershipUser] = useState(
+    server.users[0]?.id !== server.ownerid
+      ? server.users[0]?.id
+      : server.users[1]?.id
+  );
+
   const createRole = trpc.roles.createRole.useMutation();
+
   const roleNameRef = useRef<HTMLInputElement>(null);
+  const transferOwnershipRef = useRef<HTMLInputElement>(null);
+
   function handleCreateRole() {
     setCreateRoleModalOpen(false);
     if (!roleNameRef.current) return;
     if (!(roleNameRef.current.value.trim().length > 0)) return;
     createRole.mutate({
       name: roleNameRef.current.value,
-      permissions: [],
-      color: "#fff",
+      permissions: rolePermissions,
+      color: roleColor,
       serverId: server.id,
-      visible: true,
+      visible: roleVisibility,
     });
     roleNameRef.current.value = "";
+    setRolePermissions([]);
   }
+
+  function handleTransferOwnership() {
+    if (!transferOwnershipRef.current) return;
+    if (!(transferOwnershipRef.current.value.trim().length > 0)) return;
+    if (transferOwnershipRef.current.value !== server.name) return;
+    updateServer.mutate({
+      id: server.id,
+      ownerId: transferOwnershipUser,
+    });
+    setTransferOwnershipModalOpen(false);
+    window.location.href = `/${server.id}`;
+  }
+
   const updateServer = trpc.server.updateServer.useMutation();
 
   if (!server || !server.owner || !server.users) return <></>;
@@ -40,6 +77,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
   const sortRoles = (a: Role, b: Role) => {
     return a.position.toString().localeCompare(b.position.toString());
   };
+
   const createAt = new Date(server.createdAt);
   const dateString = `${createAt.getDate().toString().padStart(2, "0")}.${(
     createAt.getMonth() + 1
@@ -54,6 +92,9 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     .padStart(2, "0")}:${createAt.getSeconds().toString().padStart(2, "0")}`;
   return (
     <>
+      <Head>
+        <title>Server - Settings</title>
+      </Head>
       <div className={styles.wrapper}>
         <div className={styles.options}>
           <div id="info" className={styles.option}>
@@ -71,7 +112,14 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
               </h3>
               <h3>Member count: {server.users.length ?? 0}</h3>
               <h3>Created at: {dateString}</h3>
-              {/* TODO: Add Transfer ownership modal  */}
+              <span id={styles.gap} />
+              <p
+                onClick={() => setTransferOwnershipModalOpen(true)}
+                id={styles.delete}
+                className={styles.option_category}
+              >
+                Transfer Ownership
+              </p>
             </div>
           </div>
           <div id="roles" className={styles.option}>
@@ -86,7 +134,15 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
             </p>
             <div className={serverStyles.roles}>
               {server.roles.sort(sortRoles).map((role) => (
-                <p key={role.id}>{role.name}</p>
+                <p
+                  onClick={() => {
+                    setSelectedRole(role);
+                    setEditRoleModalOpen(true);
+                  }}
+                  key={role.id}
+                >
+                  {role.name}
+                </p>
               ))}
             </div>
           </div>
@@ -139,7 +195,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
         </div>
         <div className={styles.option_categories}>
           <a
-            href=".."
+            href={server.id}
             style={{
               color: "black",
               backgroundColor: "#fff",
@@ -187,7 +243,113 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
         setOpen={setCreateRoleModalOpen}
       >
         <ModalInput focus placeholder="Role Name" rref={roleNameRef} />
+        <ModalDropdown
+          multiselect
+          onSelectMultiple={(options) => {
+            const rolePerms: Permission[] = [];
+            options.forEach((option) => {
+              if (!rolePerms.includes(option.value))
+                rolePerms.push(option.value);
+            });
+            setRolePermissions(rolePerms);
+          }}
+          options={PermissionOptions}
+        />
+        <ModalColorPicker
+          value="Role Color:"
+          defaultValue={roleColor}
+          onChange={(color) => {
+            setRoleColor(color);
+          }}
+        />
+        <ModalCheckbox
+          checked
+          value="Visible"
+          onChange={(visible) => setRoleVisibility(visible)}
+        />
         <ModalButton value="Create role" onClick={() => handleCreateRole()} />
+      </Modal>
+      <Modal
+        blur
+        closable
+        open={editRoleModalOpen}
+        setOpen={setEditRoleModalOpen}
+      >
+        <ModalTitle value={selectedRole?.name!} />
+        <ModalInput focus placeholder="Change Name" rref={roleNameRef} />
+        <ModalDropdown
+          multiselect
+          onSelectMultiple={(options) => {
+            const rolePerms: Permission[] = [];
+            options.forEach((option) => {
+              if (!rolePerms.includes(option.value))
+                rolePerms.push(option.value);
+            });
+            setRolePermissions(rolePerms);
+          }}
+          options={PermissionOptions}
+          defaultValues={(
+            selectedRole?.permissions ?? ([] as Permission[])
+          ).map((permission) => {
+            return selectedRole?.permissions.length
+              ? { label: permission.toString(), value: permission }
+              : {
+                  label: null,
+                  value: null,
+                };
+          })}
+        />
+        <ModalColorPicker
+          value="Role Color:"
+          defaultValue={roleColor}
+          onChange={(color) => {
+            setRoleColor(color);
+          }}
+        />
+        <ModalCheckbox
+          checked
+          value="Visible"
+          onChange={(visible) => setRoleVisibility(visible)}
+        />
+
+        <ModalButton value="Create role" onClick={() => handleCreateRole()} />
+      </Modal>
+      <Modal
+        blur
+        closable
+        open={transferOwnershipModalOpen}
+        setOpen={setTransferOwnershipModalOpen}
+      >
+        <ModalTitle value="Transfer Ownership" />
+        <ModalDropdown
+          defaultValue={
+            server.users[0]?.id !== server.ownerid
+              ? {
+                  label: server.users[0]?.name!,
+                  value: server.users[0]?.id!,
+                }
+              : {
+                  label: server.users[1]?.name!,
+                  value: server.users[1]?.id!,
+                }
+          }
+          options={server.users.map((user) => {
+            return user.id !== server.ownerid
+              ? { label: user.name, value: user.id }
+              : { label: null, value: null };
+          })}
+          onSelect={(option) => {
+            setTransferOwnershipUser(option?.value);
+          }}
+        />
+        <ModalInput placeholder="Server Name" rref={transferOwnershipRef} />
+        <ModalButton
+          type="delete"
+          value="Transfer Ownership"
+          onClick={() => {
+            handleTransferOwnership();
+          }}
+        />
       </Modal>
     </>
   );

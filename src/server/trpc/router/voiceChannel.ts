@@ -1,23 +1,13 @@
-import { Prisma, VoiceChannel } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
+import { VoiceChannel } from "../../../types";
 
 const ee = new EventEmitter();
-const defaultChannelSelect = Prisma.validator<Prisma.VoiceChannelSelect>()({
-  id: true,
-  name: true,
-  createdAt: true,
-  updatedAt: true,
-  serverid: true,
-  category: true,
-  position: true,
-  categoryid: true,
-  permissions: true,
-  users: true,
-});
+
 export const voiceChannelRouter = router({
   createChannel: protectedProcedure
     .input(z.object({ name: z.string(), serverid: z.string() }))
@@ -155,9 +145,13 @@ export const voiceChannelRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const channel = await ctx.prisma.voiceChannel.findMany({
-        select: defaultChannelSelect,
         take: limit + 1,
         where: { serverid: input.serverid },
+        include: {
+          category: true,
+          server: true,
+          users: true,
+        },
         cursor: cursor
           ? {
               id: cursor,

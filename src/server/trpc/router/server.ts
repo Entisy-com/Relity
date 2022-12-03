@@ -1,27 +1,12 @@
-import { Prisma } from "@prisma/client";
-import type { Server } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
+import { Server } from "../../../types";
+import { userAgent } from "next/server";
+import { TRPCError } from "@trpc/server";
 
 const ee = new EventEmitter();
-const defaultServerSelect = Prisma.validator<Prisma.ServerSelect>()({
-  id: true,
-  name: true,
-  users: true,
-  roles: true,
-  textchannel: true,
-  voicechannel: true,
-  owner: true,
-  ownerid: true,
-  createdAt: true,
-  updatedAt: true,
-  bannedUser: true,
-  pfp: true,
-  banner: true,
-  categories: true,
-});
 
 export const serverRouter = router({
   createServer: protectedProcedure
@@ -40,6 +25,20 @@ export const serverRouter = router({
               id: ctx.session.user.id,
             },
           },
+          textchannel: {
+            create: {
+              name: "General",
+            },
+          },
+          roles: {
+            create: {
+              name: "everyone",
+              color: "#fff",
+              visible: false,
+              permissions: ["READ_MESSAGES", "SEND_MESSAGES"],
+              users: { connect: { id: ctx.session.user.id } },
+            },
+          },
         },
       });
       ee.emit("addServer", server);
@@ -52,6 +51,7 @@ export const serverRouter = router({
         name: z.string().optional(),
         pfp: z.string().optional(),
         banner: z.string().optional(),
+        ownerId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -61,6 +61,7 @@ export const serverRouter = router({
           name: input.name,
           pfp: input.pfp,
           banner: input.banner,
+          ownerid: input.ownerId,
         },
       });
       ee.emit("updateServer", server);
@@ -69,28 +70,60 @@ export const serverRouter = router({
   deleteServer: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const channelUpdate = await ctx.prisma.textChannel.deleteMany({
+      const server = await ctx.prisma.server.findUnique({
+        where: {
+          id: input.id,
+        },
+        include: {
+          textchannel: true,
+          voicechannel: true,
+          categories: true,
+          roles: true,
+        },
+      });
+      if (!server) throw new TRPCError({ code: "NOT_FOUND" });
+      (server.textchannel ?? []).forEach(async (channel) => {
+        await ctx.prisma.textChannel.delete({
+          where: {
+            id: channel.id,
+          },
+        });
+      });
+      (server.voicechannel ?? []).forEach(async (channel) => {
+        await ctx.prisma.voiceChannel.delete({
+          where: {
+            id: channel.id,
+          },
+        });
+      });
+      (server.categories ?? []).forEach(async (category) => {
+        await ctx.prisma.category.delete({
+          where: {
+            id: category.id,
+          },
+        });
+      });
+      (server.roles ?? []).forEach(async (role) => {
+        await ctx.prisma.role.delete({
+          where: {
+            id: role.id,
+          },
+        });
+      });
+      await ctx.prisma.voiceChannel.deleteMany({
         where: {
           serverid: input.id,
         },
       });
-      const server = await ctx.prisma.server.findUnique({
-        where: { id: input.id },
-        select: {
-          users: true,
+      await ctx.prisma.category.deleteMany({
+        where: {
+          serverid: input.id,
         },
       });
-      server?.users.forEach(async (user) => {
-        await ctx.prisma.user.update({
-          where: { id: user.id },
-          data: {
-            server: {
-              disconnect: {
-                id: input.id,
-              },
-            },
-          },
-        });
+      await ctx.prisma.role.deleteMany({
+        where: {
+          serverid: input.id,
+        },
       });
       const deleteServer = await ctx.prisma.server.delete({
         where: {
@@ -135,26 +168,13 @@ export const serverRouter = router({
           id: input.id,
         },
         include: {
-          users: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendswith: true,
-              mentionedin: true,
-              messages: true,
-              ownerof: true,
-              roles: true,
-              server: true,
-              settings: true,
-              voicechannel: true,
-            },
-          },
-          roles: {
-            include: {
-              users: true,
-            },
-          },
+          textchannel: true,
+          bannedUser: true,
+          categories: true,
+          owner: true,
+          roles: true,
+          users: true,
+          voicechannel: true,
         },
       });
       return server;
@@ -171,7 +191,16 @@ export const serverRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const servers = await ctx.prisma.server.findMany({
-        select: defaultServerSelect,
+        include: {
+          textchannel: true,
+          bannedUser: true,
+          categories: true,
+          owner: true,
+          roles: true,
+          users: true,
+          voicechannel: true,
+          ActionLog: true,
+        },
         take: limit + 1,
         where: { users: { some: { id: input.userid } } },
         cursor: cursor

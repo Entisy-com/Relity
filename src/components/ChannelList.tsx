@@ -1,9 +1,9 @@
 import { FC, useCallback, useEffect, useState } from "react";
 import { trpc } from "../utils/trpc";
-import { TextChannel, User, VoiceChannel } from "@prisma/client";
 import styles from "../styles/components/channelList.module.scss";
 import { BASE_URL } from "../utils/constants";
 import { useSession } from "next-auth/react";
+import { TextChannel, VoiceChannel } from "../types";
 
 type Props = {
   setSelectedTextChannel: Function;
@@ -180,7 +180,7 @@ const ChannelList: FC<Props> = ({
   });
   trpc.voiceChannel.onJoinChannel.useSubscription(undefined, {
     onData(channel) {
-      updateVoiceChannel([channel]);
+      addVoiceChannel([channel]);
     },
     onError(err) {
       console.error("Subscription error:", err);

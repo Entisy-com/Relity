@@ -1,17 +1,22 @@
-import type { Server } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
 import Image from "next/image";
-import Modal from "./modal/Modal";
-import ModalInput from "./modal/ModalInput";
-import ModalTitle from "./modal/ModalTitle";
-import ModalButton from "./modal/ModalButton";
 import { trpc } from "../utils/trpc";
 import { User } from "next-auth";
-import ModalText from "./modal/ModalText";
-import ModalFileSelect from "./modal/ModalFileSelect";
-import ModalImage from "./modal/ModalImage";
-import { useSession } from "next-auth/react";
+import { CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
+import axios from "axios";
+import {
+  Modal,
+  ModalButton,
+  ModalColorPicker,
+  ModalFileSelect,
+  ModalImage,
+  ModalInput,
+  ModalText,
+  ModalTitle,
+} from "./modal";
+import { Server } from "../types";
 
 type Props = {
   user: User;
@@ -25,15 +30,17 @@ const ServerList: FC<Props> = ({ user }) => {
 
   const utils = trpc.useContext();
   const [serverName, setServerName] = useState("");
+  const [serverImage, setServerImage] = useState("");
 
   const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
     serverQuery;
 
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [server, setServer] = useState(() => {
     const servers = serverQuery.data?.pages.map((page) => page.servers).flat();
-    return servers;
+    return servers ?? [];
   });
-  // TODO: should only add to user of server
+
   const addServer = useCallback((incoming?: Server[]) => {
     setServer((current) => {
       const map: Record<Server["id"], Server> = {};
@@ -72,7 +79,8 @@ const ServerList: FC<Props> = ({ user }) => {
   });
   trpc.server.onServerUpdate.useSubscription(undefined, {
     onData(server) {
-      setServerName(server.name);
+      if (server.id === selectedServer?.id) setServerName(server.name);
+      setServerImage(serverImage);
     },
     onError(err) {
       console.error("Subscription error:", err);
@@ -82,6 +90,7 @@ const ServerList: FC<Props> = ({ user }) => {
 
   const createServer = trpc.server.createServer.useMutation();
   const deleteServer = trpc.server.deleteServer.useMutation();
+  const updateServer = trpc.server.updateServer.useMutation();
   const nameRef = useRef<HTMLInputElement>(null);
   const deleteRef = useRef<HTMLInputElement>(null);
   const repeatDeleteRef = useRef<HTMLInputElement>(null);
@@ -103,9 +112,30 @@ const ServerList: FC<Props> = ({ user }) => {
       return;
     if (deleteRef.current.value.trim() !== selectedServer?.name.trim()) return;
     deleteServer.mutate({ id: selectedServer?.id! });
-    window.location.href = "/";
+    // window.location.href = "/";
   }
 
+  async function handleChangeImage(file: File) {
+    const formData = new FormData();
+    formData.append(file.name, file);
+
+    const { data, status } = await axios.post(
+      `${CDN_API_URL}/upload`,
+      formData
+    );
+
+    const pfp = `${CDN_BASE_URL}/${data.message[file.name].md5}.${
+      data.message[file.name].name.split(".")[1]
+    }`;
+
+    if (status === 200) {
+      updateServer.mutate({
+        id: selectedServer?.id!,
+        pfp: pfp,
+      });
+    }
+    setServerImage(pfp);
+  }
   const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
   const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
@@ -118,8 +148,10 @@ const ServerList: FC<Props> = ({ user }) => {
           <div
             key={server.id}
             className={styles.server}
-            onClick={() => {
+            onClick={(e) => {
               window.location.href = `/${server.id}`;
+              e.preventDefault();
+              setSelectedServer(server);
             }}
             onContextMenu={(e) => {
               if (server.ownerid === user.id) {
@@ -141,7 +173,36 @@ const ServerList: FC<Props> = ({ user }) => {
               <></>
             )}
             <div className={styles.logo}>
-              {server.pfp ? (
+              {serverImage !== "" ? (
+                <>
+                  {serverImage.endsWith(".gif") ? (
+                    <>
+                      <img
+                        className={styles.a_pfp}
+                        src={serverImage}
+                        alt=""
+                        width={40}
+                        height={40}
+                      />
+                      <img
+                        className={styles.pfp}
+                        src={serverImage.replace(".gif", ".png")}
+                        alt=""
+                        width={40}
+                        height={40}
+                      />
+                    </>
+                  ) : (
+                    <img
+                      className={styles.pfp}
+                      src={serverImage}
+                      alt=""
+                      width={40}
+                      height={40}
+                    />
+                  )}
+                </>
+              ) : server.pfp ? (
                 <>
                   {server.pfp.endsWith(".gif") ? (
                     <>
@@ -207,6 +268,7 @@ const ServerList: FC<Props> = ({ user }) => {
             handleCreateServer();
           }}
         />
+        <ModalColorPicker />
       </Modal>
       <Modal
         blur
@@ -216,23 +278,34 @@ const ServerList: FC<Props> = ({ user }) => {
         setOpen={setServerInfoModalOpen}
       >
         <ModalTitle value={selectedServer?.name!} />
-        {selectedServer?.pfp ? (
+        {serverImage !== "" ? (
+          <ModalImage size={100} src={serverImage!} />
+        ) : selectedServer?.pfp ? (
           <ModalImage size={100} src={selectedServer?.pfp!} />
         ) : (
           <></>
         )}
+
         <ModalFileSelect
           serverId={selectedServer?.id!}
           value="Set Picture"
           fileType=".png, .jpg, .jpeg"
+          onChange={(file) => {
+            handleChangeImage(file);
+          }}
         />
         <ModalText value="Change Name" />
         <ModalInput focus placeholder="Server Name" rref={nameRef} />
         <ModalButton
           value="Done!"
           onClick={() => {
-            setCreateServerModalOpen(false);
-            handleCreateServer();
+            if (!nameRef.current) return;
+            if (!(nameRef.current.value.trim().length > 0)) return;
+            updateServer.mutate({
+              id: selectedServer?.id!,
+              name: nameRef.current.value,
+            });
+            setServerInfoModalOpen(false);
           }}
         />
         <ModalButton
@@ -240,7 +313,6 @@ const ServerList: FC<Props> = ({ user }) => {
           value="Delete Server!"
           onClick={() => {
             setServerInfoModalOpen(false);
-            setCreateServerModalOpen(false);
             setDeleteServerModalOpen(true);
           }}
         />

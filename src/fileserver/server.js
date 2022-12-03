@@ -3,9 +3,11 @@ const fileUpload = require("express-fileupload");
 const path = require("path");
 const cors = require("cors");
 
-const filesPayloadExists = require("../middleware/filesPayLoadExists");
-const fileExtLimiter = require("../middleware/fileExtLimiter");
-const fileSizeLimiter = require("../middleware/fileSizeLimiter");
+const {
+  filesPayloadExists,
+  fileExtLimiter,
+  fileSizeLimiter,
+} = require("../middleware");
 
 const PORT = process.env.CDN_PORT || 4000;
 

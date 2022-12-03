@@ -2,22 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import { Message, Prisma } from "@prisma/client";
-
-const defaultMessageSelect = Prisma.validator<Prisma.MessageSelect>()({
-  id: true,
-  content: true,
-  author: true,
-  authorId: true,
-  color: true,
-  backgroundColor: true,
-  mentionedRoles: true,
-  mentionedUser: true,
-  updatedAt: true,
-  createdAt: true,
-  textChannel: true,
-  textChannelId: true,
-});
+import { Message } from "../../../types";
 
 const ee = new EventEmitter();
 export const messageRouter = router({
@@ -91,12 +76,6 @@ export const messageRouter = router({
         where: {
           id: input.id,
         },
-        include: {
-          author: true,
-          mentionedUser: true,
-          mentionedRoles: true,
-          textChannel: true,
-        },
       });
       return server;
     }),
@@ -112,9 +91,14 @@ export const messageRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const messages = await ctx.prisma.message.findMany({
-        select: defaultMessageSelect,
         take: limit + 1,
         where: { textChannelId: input.channelId },
+        include: {
+          author: true,
+          mentionedRoles: true,
+          mentionedUser: true,
+          textChannel: true,
+        },
         cursor: cursor
           ? {
               id: cursor,

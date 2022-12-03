@@ -32,11 +32,7 @@ const Modal: FC<Props> = ({
   }, [open, setOpen]);
 
   return (
-    <div
-      className={styles.wrapper}
-      onClick={(e) => e.stopPropagation()}
-      onContextMenu={(e) => e.stopPropagation()}
-    >
+    <div className={styles.wrapper}>
       {open && (
         <form
           onSubmit={() => {

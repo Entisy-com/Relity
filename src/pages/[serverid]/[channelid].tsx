@@ -1,4 +1,4 @@
-import { Message, Server, TextChannel, User, Role } from "@prisma/client";
+import { Server, TextChannel, User, Role, Prisma } from "@prisma/client";
 import { GetServerSidePropsContext, NextPage } from "next";
 import { useSession } from "next-auth/react";
 import ServerInfo from "../../components/ServerInfo";
@@ -13,6 +13,15 @@ import ModalTitle from "../../components/modal/ModalTitle";
 import ModalText from "../../components/modal/ModalText";
 import ModalButton from "../../components/modal/ModalButton";
 import styles from "../../styles/pages/[channelid].module.scss";
+
+type Message = Prisma.MessageGetPayload<{
+  include: {
+    author: true;
+    mentionedRoles: true;
+    mentionedUser: true;
+    textChannel: true;
+  };
+}>;
 
 type Props = {
   server: Server;
@@ -149,23 +158,34 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     <>
       <div className={styles.wrapper}>
         <div className={styles.chat}>
+          <p className={styles.tc_name}>{channel.name}</p>
           <div className={styles.messages}>
             <>
-              {(message ?? []).map((message) => (
-                <div className={styles.message} key={message.id}>
-                  <img
-                    className={styles.pfp}
-                    src={message.author?.image ?? ""}
-                    alt=""
-                    width={30}
-                    height={30}
-                  />
-                  <div className={styles.content}>
-                    <p className={styles.name}>{message.author?.name}</p>
-                    <p className={styles.msg}>{message.content}</p>
+              {(message ?? []).map((msg) => {
+                return message![message?.length! - 2]?.authorId ===
+                  msg.authorId &&
+                  message![message?.length! - 2]?.id !== msg.id ? (
+                  <div className={styles.message} key={msg.id}>
+                    <div className={styles.content}>
+                      <p className={styles.msg}>{msg.content}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div className={styles.message} key={msg.id}>
+                    <img
+                      className={styles.pfp}
+                      src={msg.author?.image ?? ""}
+                      alt=""
+                      width={30}
+                      height={30}
+                    />
+                    <div className={styles.content}>
+                      <p className={styles.name}>{msg.author?.name}</p>
+                      <p className={styles.msg}>{msg.content}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </>
           </div>
           <form className={styles.input} onSubmit={(e) => handleSendMessage(e)}>

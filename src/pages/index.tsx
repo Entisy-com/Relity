@@ -6,6 +6,7 @@ import { trpc } from "../utils/trpc";
 import styles from "../styles/pages/index.module.scss";
 import ServerList from "../components/ServerList";
 import Profile from "../components/Profile";
+import ModalDropdown from "../components/modal/ModalDropdown";
 
 type Props = {
   user: User;
