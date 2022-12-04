@@ -1,3 +1,4 @@
+import { Permission } from "@prisma/client";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { FC, useRef, useState } from "react";
@@ -140,6 +141,13 @@ const ServerInfo: FC<Props> = ({ server }) => {
       <div className={styles.wrapper}>
         <p
           onClick={() => {
+            server.roles.forEach((role) => {
+              if (role.permissions.includes(Permission.MANAGE_SERVER)) {
+                role.users.forEach((u) => {
+                  if (u.id === user.id) setServerOptionsModalOpen(true);
+                });
+              }
+            });
             if (server.ownerid === user.id) setServerOptionsModalOpen(true);
             else setServerMemberModalOpen(true);
           }}

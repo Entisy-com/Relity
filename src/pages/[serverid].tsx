@@ -25,7 +25,7 @@ const ServerPage: NextPage<Props> = ({ server, user }) => {
     <>
       <div className={styles.wrapper}>
         <ServerInfo server={allData} />
-        <Profile />
+        <Profile user={user} />
         <ServerList user={user} />
       </div>
     </>

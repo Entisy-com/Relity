@@ -4,6 +4,7 @@ import EventEmitter from "events";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { User } from "../../../types";
+import { OnlineStatus } from "@prisma/client";
 
 const ee = new EventEmitter();
 export const userRouter = router({
@@ -53,6 +54,38 @@ export const userRouter = router({
       ee.on("joinServer", onJoin);
       return () => {
         ee.off("joinServer", onJoin);
+      };
+    });
+  }),
+  updateUser: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        image: z.string().optional(),
+        status: z.nativeEnum(OnlineStatus).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const update = await ctx.prisma.user.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          image: input.image,
+          name: input.name,
+          status: input.status,
+        },
+      });
+      ee.emit("updateUser", update);
+      return update;
+    }),
+  onUpdateUser: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onUpdate = (data: User) => emit.next(data);
+      ee.on("updateUser", onUpdate);
+      return () => {
+        ee.off("updateUser", onUpdate);
       };
     });
   }),

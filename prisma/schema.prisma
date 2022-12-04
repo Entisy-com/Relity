@@ -81,7 +81,7 @@ model Role {
     position    Int          @default(0)
     server      Server       @relation(fields: [serverid], references: [id])
     mentionedIn Message[]    @relation("MessageToRole")
-    users       User[]       @relation("RoleToUser")
+    member      Member[]     @relation("RoleToMember")
 }
 
 model Server {
@@ -98,7 +98,7 @@ model Server {
     textchannel  TextChannel[]
     voicechannel VoiceChannel[]
     bannedUser   User[]         @relation("bannedusers")
-    users        User[]         @relation("users")
+    member       Member[]
     actionLog    ActionLog?
 }
 
@@ -147,13 +147,22 @@ model User {
     sessions       Session[]
     voicechannel   VoiceChannel? @relation(fields: [voicechannelid], references: [id])
     settings       UserSettings?
-    roles          Role[]        @relation("RoleToUser")
     bannedon       Server[]      @relation("bannedusers")
     friends        User[]        @relation("friends")
     friendsWith    User[]        @relation("friends")
     mentionedin    Message[]     @relation("mentions")
-    server         Server[]      @relation("users")
     actionType     ActionType[]
+    member         Member[]
+}
+
+model Member {
+    id       String  @id @default(cuid())
+    user     User    @relation(fields: [userId], references: [id])
+    userId   String
+    roles    Role[]  @relation(name: "RoleToMember")
+    nickname String?
+    server   Server  @relation(fields: [serverId], references: [id])
+    serverId String
 }
 
 model ActionLog {

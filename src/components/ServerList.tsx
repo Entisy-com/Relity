@@ -4,7 +4,7 @@ import styles from "../styles/components/serverList.module.scss";
 import Image from "next/image";
 import { trpc } from "../utils/trpc";
 import { User } from "next-auth";
-import { CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
+import { CDN_API_URL, CDN_BASE_URL, LOGGER_URL } from "../utils/constants";
 import axios from "axios";
 import {
   Modal,
@@ -120,6 +120,9 @@ const ServerList: FC<Props> = ({ user }) => {
     if (!nameRef.current) return;
     if (!(nameRef.current.value.trim().length > 0)) return;
     createServer.mutate({ name: nameRef.current.value });
+    axios.post(`${LOGGER_URL}`, {
+      message: `Created server "${nameRef.current.value}"`,
+    });
   }
 
   function handleDeleteServer() {
@@ -132,7 +135,11 @@ const ServerList: FC<Props> = ({ user }) => {
     if (deleteRef.current.value.trim() !== repeatDeleteRef.current.value.trim())
       return;
     if (deleteRef.current.value.trim() !== selectedServer?.name.trim()) return;
+    axios.post(`${LOGGER_URL}`, {
+      message: `Deleted server "${deleteRef.current.value}"`,
+    });
     deleteServer.mutate({ id: selectedServer?.id! });
+
     window.location.href = "/";
   }
 
@@ -156,6 +163,9 @@ const ServerList: FC<Props> = ({ user }) => {
       });
     }
     setServerImage(pfp);
+    axios.post(`${LOGGER_URL}`, {
+      message: `Updated server Icon on "${selectedServer?.name}"`,
+    });
   }
   const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
   const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
@@ -326,6 +336,10 @@ const ServerList: FC<Props> = ({ user }) => {
               name: nameRef.current.value,
             });
             setServerInfoModalOpen(false);
+
+            axios.post(`${LOGGER_URL}`, {
+              message: `Changed server name from "${selectedServer?.name}" to "${nameRef.current.value}"`,
+            });
           }}
         />
         <ModalButton

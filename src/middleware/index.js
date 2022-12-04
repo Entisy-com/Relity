@@ -1,5 +1,5 @@
-import fileExtLimiter from "./fileExtLimiter";
-import fileSizeLimiter from "./fileSizeLimiter";
-import filesPayloadExists from "./filesPayLoadExists";
+const fileExtLimiter = require("./fileExtLimiter");
+const fileSizeLimiter = require("./fileSizeLimiter");
+const filesPayloadExists = require("./filesPayLoadExists");
 
-export { fileExtLimiter, fileSizeLimiter, filesPayloadExists };
+module.exports = { fileExtLimiter, fileSizeLimiter, filesPayloadExists };

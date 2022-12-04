@@ -2,13 +2,82 @@ import { Permission, Prisma } from "@prisma/client";
 
 export type Server = Prisma.ServerGetPayload<{
   include: {
-    bannedUser: true;
-    categories: true;
-    owner: true;
-    roles: true;
-    textchannel: true;
-    users: true;
-    voicechannel: true;
+    bannedUser: {
+      include: {
+        actionType: true;
+        adminuser: true;
+        bannedon: true;
+        friends: true;
+        friendsWith: true;
+        mentionedin: true;
+        messages: true;
+        ownerof: true;
+        roles: true;
+        server: true;
+        settings: true;
+        voicechannel: true;
+      };
+    };
+    categories: {
+      include: {
+        server: true;
+        textchannels: true;
+        voicechannels: true;
+      };
+    };
+    owner: {
+      include: {
+        actionType: true;
+        adminuser: true;
+        bannedon: true;
+        friends: true;
+        friendsWith: true;
+        mentionedin: true;
+        messages: true;
+        ownerof: true;
+        roles: true;
+        server: true;
+        settings: true;
+        voicechannel: true;
+      };
+    };
+    roles: {
+      include: {
+        mentionedIn: true;
+        server: true;
+        users: true;
+      };
+    };
+    textchannel: {
+      include: {
+        category: true;
+        messages: true;
+        server: true;
+      };
+    };
+    users: {
+      include: {
+        actionType: true;
+        adminuser: true;
+        bannedon: true;
+        friends: true;
+        friendsWith: true;
+        mentionedin: true;
+        messages: true;
+        ownerof: true;
+        roles: true;
+        server: true;
+        settings: true;
+        voicechannel: true;
+      };
+    };
+    voicechannel: {
+      include: {
+        category: true;
+        server: true;
+        users: true;
+      };
+    };
     actionLog: {
       include: {
         actions: true;
@@ -20,7 +89,6 @@ export type Server = Prisma.ServerGetPayload<{
 
 export type User = Prisma.UserGetPayload<{
   include: {
-    accounts: true;
     adminuser: true;
     bannedon: true;
     friends: true;
@@ -30,7 +98,6 @@ export type User = Prisma.UserGetPayload<{
     ownerof: true;
     roles: true;
     server: true;
-    sessions: true;
     settings: true;
     voicechannel: true;
   };

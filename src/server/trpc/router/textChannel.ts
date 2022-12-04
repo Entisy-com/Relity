@@ -22,7 +22,6 @@ export const textChannelRouter = router({
           },
         },
       });
-      console.warn({ channel });
       ee.emit("addChannel", channel);
       return channel;
     }),

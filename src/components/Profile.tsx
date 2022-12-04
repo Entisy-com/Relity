@@ -1,15 +1,20 @@
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { FC, useState } from "react";
 import Modal from "./modal/Modal";
 import ModalTitle from "./modal/ModalTitle";
 import styles from "../styles/components/profile.module.scss";
 import ModalButton from "./modal/ModalButton";
 import ModalText from "./modal/ModalText";
 import { BASE_URL } from "../utils/constants";
+import { trpc } from "../utils/trpc";
+import { OnlineStatus } from "@prisma/client";
+import { User } from "@prisma/client";
 
-const Profile = () => {
-  const session = useSession();
-  const user = session.data?.user;
+type Props = {
+  user: User;
+};
+
+const Profile: FC<Props> = ({ user }) => {
   const [open, setOpen] = useState(false);
 
   if (!user) return <></>;
@@ -26,6 +31,11 @@ const Profile = () => {
       >
         {user.image ? (
           <div className={styles.image}>
+            {user.status === OnlineStatus.ONLINE ? (
+              <p>ONLINE</p>
+            ) : (
+              <p>OFFLINE</p>
+            )}
             <img
               src={user.image}
               alt="Profile Picture"

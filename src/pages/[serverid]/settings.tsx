@@ -26,12 +26,14 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
   const { data: session } = useSession();
   const user = session?.user;
 
+  const [selectedUser, setSelectedUser] = useState<User>();
   const [selectedRole, setSelectedRole] = useState<Role>();
   const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [createRoleModalOpen, setCreateRoleModalOpen] = useState(false);
   const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
   const [roleVisibility, setRoleVisibility] = useState(true);
   const [roleColor, setRoleColor] = useState("#ffffff");
+  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
   const [transferOwnershipModalOpen, setTransferOwnershipModalOpen] =
     useState(false);
 
@@ -459,6 +461,14 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           onClick={() => {
             handleTransferOwnership();
           }}
+        />
+      </Modal>
+      <Modal open={editUserModalOpen} setOpen={setEditRoleModalOpen} blur>
+        <ModalTitle value={selectedUser?.name!} />
+        <ModalDropdown
+          options={server.roles.map((role) => {
+            return { label: role.name, value: role.id };
+          })}
         />
       </Modal>
     </>

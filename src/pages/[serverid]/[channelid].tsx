@@ -35,6 +35,8 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
   const utils = trpc.useContext();
   const user = session.data?.user;
 
+  const { data: allUser } = trpc.user.getUser.useQuery({ userId: user?.id! });
+
   const { data: allData } = trpc.server.getServerById.useQuery({
     id: server.id,
   });
@@ -268,7 +270,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
           <ServerInfo server={allData} />
         </div>
         <div className={styles.servers}>
-          <Profile />
+          <Profile user={allUser} />
           <ServerList user={user} />
         </div>
       </div>
