@@ -17,24 +17,26 @@ type Props = {
 const Index: NextPage<Props> = ({ user }) => {
   const updateUser = trpc.user.updateUser.useMutation();
 
-  // if (user) {
-  //   setInterval(async () => {
-  //     console.log("Sending Heartbeat");
-  //     const res = await axios.get(HEARTBEAT_URL);
-  //     if (res.status === 200) {
-  //       updateUser.mutate({
-  //         id: user.id!,
-  //         status: OnlineStatus.ONLINE,
-  //       });
-  //     } else {
-  //       updateUser.mutate({
-  //         id: user.id!,
-  //         status: OnlineStatus.OFFLINE,
-  //       });
-  //       console.log("Failed to send Heartbeat");
-  //     }
-  //   }, 10 * 1000);
-  // }
+  if (user) {
+    // setInterval(async () => {
+    //   console.log("Sending Heartbeat");
+    //   const res = await axios.get(HEARTBEAT_URL);
+    //   if (res.status === 200) {
+    //     if (user.status !== OnlineStatus.ONLINE)
+    //       updateUser.mutate({
+    //         id: user.id!,
+    //         status: OnlineStatus.ONLINE,
+    //       });
+    //   } else {
+    //     if (user.status !== OnlineStatus.OFFLINE)
+    //       updateUser.mutate({
+    //         id: user.id!,
+    //         status: OnlineStatus.OFFLINE,
+    //       });
+    //     console.log("Failed to send Heartbeat");
+    //   }
+    // }, 10 * 1000);
+  }
 
   return (
     <div className={styles.wrapper}>

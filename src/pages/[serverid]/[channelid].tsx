@@ -270,7 +270,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
           <ServerInfo server={allData} />
         </div>
         <div className={styles.servers}>
-          <Profile user={allUser} />
+          <Profile user={allUser?.user!} />
           <ServerList user={user} />
         </div>
       </div>

@@ -31,11 +31,8 @@ const Profile: FC<Props> = ({ user }) => {
       >
         {user.image ? (
           <div className={styles.image}>
-            {user.status === OnlineStatus.ONLINE ? (
-              <p>ONLINE</p>
-            ) : (
-              <p>OFFLINE</p>
-            )}
+            {/* user.status is undefined */}
+            {user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
             <img
               src={user.image}
               alt="Profile Picture"

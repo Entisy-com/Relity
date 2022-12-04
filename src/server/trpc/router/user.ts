@@ -148,6 +148,7 @@ export const userRouter = router({
           sessions: true,
           settings: true,
           voicechannel: true,
+          // add status after migrate
         },
       });
       return { user };
