@@ -26,7 +26,13 @@ const ModalButton: FC<Props> = ({
         if (onRightClick) onRightClick(e);
       }}
       className={styles.button}
-      id={type === "delete" ? styles.delete : ""}
+      id={
+        type === "delete"
+          ? styles.delete
+          : type === "complete"
+          ? styles.complete
+          : ""
+      }
     >
       {value}
     </p>

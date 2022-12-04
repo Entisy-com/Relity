@@ -26,7 +26,7 @@ const Modal: FC<Props> = ({
     document.addEventListener("keydown", (e) => {
       if (e.keyCode !== 27 && e.key !== "Escape") return;
       if (open) {
-        setOpen(false);
+        if (closable) setOpen(false);
       }
     });
   }, [open, setOpen]);

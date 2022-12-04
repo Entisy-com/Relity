@@ -4,6 +4,7 @@ import styles from "../styles/components/channelList.module.scss";
 import { BASE_URL } from "../utils/constants";
 import { useSession } from "next-auth/react";
 import { TextChannel, VoiceChannel } from "../types";
+import { User } from "@prisma/client";
 
 type Props = {
   setSelectedTextChannel: Function;
@@ -29,6 +30,11 @@ const ChannelList: FC<Props> = ({
 
   const joinVoiceChannel = trpc.voiceChannel.joinChannel.useMutation();
   const leaveVoiceChannel = trpc.voiceChannel.leaveChannel.useMutation();
+
+  const [userInVoiceChannel, setUserInVoiceChannel] = useState({
+    vc: "",
+    user: [] as User[],
+  });
 
   const textChannelQuery = trpc.textChannel.getChannels.useInfiniteQuery(
     { serverid },
@@ -110,18 +116,24 @@ const ChannelList: FC<Props> = ({
       );
     });
   }, []);
-  const updateVoiceChannel = useCallback((incoming: VoiceChannel[]) => {
+  const updateVoiceChannel = useCallback((incoming?: VoiceChannel[]) => {
     setVoiceChannel((current) => {
       const map: Record<VoiceChannel["id"], VoiceChannel> = {};
       for (const chan of current ?? []) {
-        for (const inc of incoming ?? []) {
-          if (chan.id === inc.id) map[chan.id] = inc;
+        map[chan.id] = chan;
+      }
+      for (const chan of incoming ?? []) {
+        map[chan.id] = chan;
+      }
+      for (const chan of incoming ?? []) {
+        for (const user of chan.users ?? []) {
+          if (user.voicechannelid === chan.id) map[chan.id] = chan;
         }
       }
 
       return Object.values(map).sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
     });
   }, []);
@@ -181,6 +193,7 @@ const ChannelList: FC<Props> = ({
   trpc.voiceChannel.onJoinChannel.useSubscription(undefined, {
     onData(channel) {
       addVoiceChannel([channel]);
+      updateVoiceChannel([channel]);
     },
     onError(err) {
       console.error("Subscription error:", err);
@@ -199,6 +212,9 @@ const ChannelList: FC<Props> = ({
 
   const { data: server } = trpc.server.getServerById.useQuery({
     id: serverid,
+  });
+  const { data: allUser } = trpc.user.getUser.useQuery({
+    userId: user?.id!,
   });
 
   if (!user) return <></>;
@@ -222,19 +238,17 @@ const ChannelList: FC<Props> = ({
                 setVoiceChannelSettingsModalOpen(true);
             }}
             onClick={() => {
-              for (let u of channel.users ?? []) {
-                if (u.id === user.id) {
-                  leaveVoiceChannel.mutate({
-                    userId: user.id,
-                    channelId: channel.id,
-                  });
-                  return;
-                }
+              if (allUser?.user?.voicechannelid) {
+                leaveVoiceChannel.mutate({
+                  userId: user.id,
+                  channelId: channel.id,
+                });
+              } else {
+                joinVoiceChannel.mutate({
+                  userId: user.id,
+                  channelId: channel.id,
+                });
               }
-              joinVoiceChannel.mutate({
-                userId: user.id,
-                channelId: channel.id,
-              });
             }}
           >
             <div
@@ -252,9 +266,13 @@ const ChannelList: FC<Props> = ({
               </p>
             </div>
             <div className={styles.vc_users}>
-              {(channel.users ?? []).map((user) => (
-                <p key={user.id}>{user.name}</p>
-              ))}
+              {channel.users?.map((user) => {
+                return <p key={user.id}>{user.name}</p>;
+              })}
+              {/* {vcUser.vc === channel.id &&
+                (vcUser.user ?? []).map((user) => (
+                  <p key={user.id}>{user.name}</p>
+                ))} */}
             </div>
           </div>
         ))}

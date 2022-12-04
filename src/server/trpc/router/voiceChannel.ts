@@ -21,6 +21,12 @@ export const voiceChannelRouter = router({
             },
           },
         },
+
+        include: {
+          users: true,
+          category: true,
+          server: true,
+        },
       });
       console.warn({ channel });
       ee.emit("addVoiceChannel", channel);
@@ -41,6 +47,12 @@ export const voiceChannelRouter = router({
       const deleteChannel = await ctx.prisma.voiceChannel.delete({
         where: {
           id: input.id,
+        },
+
+        include: {
+          users: true,
+          category: true,
+          server: true,
         },
       });
       ee.emit("deleteChannel", deleteChannel);
@@ -72,6 +84,12 @@ export const voiceChannelRouter = router({
               id: input.userId,
             },
           },
+        },
+
+        include: {
+          users: true,
+          category: true,
+          server: true,
         },
       });
 
@@ -105,6 +123,11 @@ export const voiceChannelRouter = router({
             },
           },
         },
+        include: {
+          users: true,
+          category: true,
+          server: true,
+        },
       });
 
       ee.emit("joinChannel", channel);
@@ -129,6 +152,7 @@ export const voiceChannelRouter = router({
         include: {
           server: true,
           category: true,
+          users: true,
         },
       });
       return channel;

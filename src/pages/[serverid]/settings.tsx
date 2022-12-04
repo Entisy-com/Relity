@@ -1,5 +1,5 @@
 import { GetServerSidePropsContext, NextPage } from "next";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import styles from "../../styles/pages/settings.module.scss";
 import serverStyles from "../../styles/pages/serverSettings.module.scss";
 import { trpc } from "../../utils/trpc";
@@ -9,17 +9,23 @@ import ModalInput from "../../components/modal/ModalInput";
 import ModalButton from "../../components/modal/ModalButton";
 import ModalTitle from "../../components/modal/ModalTitle";
 import ModalDropdown from "../../components/modal/ModalDropdown";
-import { Role, User, Permission } from "@prisma/client";
-import { PermissionOptions, Server } from "../../types";
+import { Role, User, Permission, Action } from "@prisma/client";
+import { ActionLog, PermissionOptions, Server } from "../../types";
+import { ActionType } from "@prisma/client";
 import ModalCheckbox from "../../components/modal/ModalCheckbox";
 import Head from "next/head";
 import { ModalColorPicker } from "../../components/modal";
+import { BASE_URL } from "../../utils/constants";
+import { useSession } from "next-auth/react";
 
 type Props = {
   server: Server;
 };
 
 const ServerSettings: NextPage<Props> = ({ server }) => {
+  const { data: session } = useSession();
+  const user = session?.user;
+
   const [selectedRole, setSelectedRole] = useState<Role>();
   const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [createRoleModalOpen, setCreateRoleModalOpen] = useState(false);
@@ -34,11 +40,46 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
       ? server.users[0]?.id
       : server.users[1]?.id
   );
+  const [actionLog, setActionLog] = useState(
+    server.actionLog ?? ({} as ActionLog)
+  );
 
   const createRole = trpc.roles.createRole.useMutation();
+  const updateServer = trpc.server.updateServer.useMutation();
+  const addActionToLog = trpc.server.addActionToActionLog.useMutation();
+  const { data: actionLogServer } = trpc.server.getActionLogFromServer.useQuery(
+    {
+      serverId: server.id,
+    }
+  );
 
   const roleNameRef = useRef<HTMLInputElement>(null);
   const transferOwnershipRef = useRef<HTMLInputElement>(null);
+
+  const addLogAction = useCallback((incoming: ActionLog) => {
+    setActionLog((current) => {
+      const map: Record<ActionType["id"], ActionType> = {};
+      for (const action of current?.actions ?? []) {
+        map[action.id] = action;
+      }
+      for (const action of incoming?.actions ?? []) {
+        map[action.id] = action;
+      }
+
+      const sorted = Object.values(map).sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      return {
+        id: current?.id,
+        server: current?.server,
+        serverId: current?.serverId,
+        actions: sorted,
+      };
+      // server.actionLog!.actions = sorted;
+      // return server.actionLog;
+    });
+  }, []);
 
   function handleCreateRole() {
     setCreateRoleModalOpen(false);
@@ -53,6 +94,28 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     });
     roleNameRef.current.value = "";
     setRolePermissions([]);
+    addActionToLog.mutate({
+      action: Action.CREATE_ROLE,
+      serverid: server.id,
+      userid: user?.id!,
+    });
+  }
+
+  function handleUpdateRole() {
+    setRoleColor(selectedRole?.color!);
+    setRolePermissions(selectedRole?.permissions!);
+    setRoleVisibility(selectedRole?.visible!);
+    setEditRoleModalOpen(false);
+    createRole.mutate({
+      name: roleNameRef?.current?.value ?? selectedRole?.name!,
+      permissions: rolePermissions,
+      color: roleColor,
+      serverId: server.id,
+      visible: roleVisibility,
+    });
+    if (roleNameRef.current && roleNameRef.current.value.trim().length > 0)
+      roleNameRef.current.value = "";
+    discard();
   }
 
   function handleTransferOwnership() {
@@ -67,7 +130,13 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     window.location.href = `/${server.id}`;
   }
 
-  const updateServer = trpc.server.updateServer.useMutation();
+  function discard() {
+    setRoleColor("#ffffff");
+    setRolePermissions([]);
+    setRoleVisibility(true);
+    setSelectedRole(undefined);
+    setEditRoleModalOpen(false);
+  }
 
   if (!server || !server.owner || !server.users) return <></>;
 
@@ -112,7 +181,21 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
               </h3>
               <h3>Member count: {server.users.length ?? 0}</h3>
               <h3>Created at: {dateString}</h3>
-              <span id={styles.gap} />
+              <p id={styles.gap} />
+              <p id={styles.separator} />
+              <p id={styles.gap} />
+              <p
+                className={styles.option_category}
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `${BASE_URL}/${server.id}/invite`
+                  );
+                }}
+              >
+                {" "}
+                Copy Invite Link
+              </p>
+              <p id={styles.gap} />
               <p
                 onClick={() => setTransferOwnershipModalOpen(true)}
                 id={styles.delete}
@@ -137,6 +220,9 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
                 <p
                   onClick={() => {
                     setSelectedRole(role);
+                    setRoleColor(role.color);
+                    setRolePermissions(role.permissions);
+                    setRoleVisibility(role.visible);
                     setEditRoleModalOpen(true);
                   }}
                   key={role.id}
@@ -156,6 +242,26 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           </div>
           <div id="action_log" className={styles.option}>
             <h1 className={styles.option_title}>Action Log</h1>
+            <>
+              {actionLogServer?.actions.map((action) => {
+                const day = new Date(action.createdAt)
+                  .getDate()
+                  .toString()
+                  .padStart(2, "0");
+                const month = (new Date(action.createdAt).getMonth() + 1)
+                  .toString()
+                  .padStart(2, "0");
+                const year = new Date(action.createdAt).getFullYear();
+                const date = `${month}/${day}/${year}`;
+                return (
+                  <div key={action.id}>
+                    <p>
+                      {action.user.name}: {action.action} at {date}
+                    </p>
+                  </div>
+                );
+              })}
+            </>
           </div>
           <div id="banned_user" className={styles.option}>
             <h1 className={styles.option_title}>Banned User</h1>
@@ -269,12 +375,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
         />
         <ModalButton value="Create role" onClick={() => handleCreateRole()} />
       </Modal>
-      <Modal
-        blur
-        closable
-        open={editRoleModalOpen}
-        setOpen={setEditRoleModalOpen}
-      >
+      <Modal blur open={editRoleModalOpen} setOpen={setEditRoleModalOpen}>
         <ModalTitle value={selectedRole?.name!} />
         <ModalInput focus placeholder="Change Name" rref={roleNameRef} />
         <ModalDropdown
@@ -301,18 +402,27 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
         />
         <ModalColorPicker
           value="Role Color:"
-          defaultValue={roleColor}
+          defaultValue={selectedRole?.color}
           onChange={(color) => {
             setRoleColor(color);
           }}
         />
         <ModalCheckbox
-          checked
+          checked={selectedRole?.visible}
           value="Visible"
           onChange={(visible) => setRoleVisibility(visible)}
         />
 
-        <ModalButton value="Create role" onClick={() => handleCreateRole()} />
+        <ModalButton
+          type="complete"
+          value="Save Changes!"
+          onClick={() => handleUpdateRole()}
+        />
+        <ModalButton
+          value="Discard Changes!"
+          type="delete"
+          onClick={() => discard()}
+        />
       </Modal>
       <Modal
         blur

@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { FC, useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
 import { Server, TextChannel, User, VoiceChannel } from "../types";
-import { CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
+import { BASE_URL, CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
 import Modal from "./modal/Modal";
@@ -25,6 +25,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const utils = trpc.useContext();
 
   const [serverOptionsModalOpen, setServerOptionsModalOpen] = useState(false);
+  const [serverMemberModalOpen, setServerMemberModalOpen] = useState(false);
   const [serverUserInfoModalOpen, setServerUserInfoModalOpen] = useState(false);
   const [textChannelSettingsModalOpen, setTextChannelSettingsModalOpen] =
     useState(false);
@@ -140,6 +141,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
         <p
           onClick={() => {
             if (server.ownerid === user.id) setServerOptionsModalOpen(true);
+            else setServerMemberModalOpen(true);
           }}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -208,6 +210,21 @@ const ServerInfo: FC<Props> = ({ server }) => {
         <ModalButton
           value="Settings"
           onClick={() => (window.location.href = `/${server.id}/settings`)}
+        />
+      </Modal>
+      <Modal
+        open={serverMemberModalOpen}
+        setOpen={setServerMemberModalOpen}
+        blur
+        closable
+        darken="3"
+      >
+        <ModalTitle value={server.name} />
+        <ModalButton
+          value="Copy Invite Link"
+          onClick={() => {
+            navigator.clipboard.writeText(`${BASE_URL}/${server.id}/invite`);
+          }}
         />
       </Modal>
       {/* region channel settings */}

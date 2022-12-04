@@ -99,7 +99,7 @@ model Server {
     voicechannel VoiceChannel[]
     bannedUser   User[]         @relation("bannedusers")
     users        User[]         @relation("users")
-    ActionLog    ActionLog[]
+    actionLog    ActionLog?
 }
 
 model Account {
@@ -153,13 +153,13 @@ model User {
     friendsWith    User[]        @relation("friends")
     mentionedin    Message[]     @relation("mentions")
     server         Server[]      @relation("users")
-    ActionType     ActionType[]
+    actionType     ActionType[]
 }
 
 model ActionLog {
     id       String       @id @default(cuid())
     server   Server       @relation(fields: [serverId], references: [id])
-    serverId String
+    serverId String       @unique
     actions  ActionType[]
 }
 
@@ -170,12 +170,13 @@ model ActionType {
     action      Action
     actionlog   ActionLog? @relation(fields: [actionlogid], references: [id])
     actionlogid String?
+    createdAt   DateTime   @default(now())
 }
 
 model UserSettings {
     id     String @id @default(cuid())
     userid String @unique
-    User   User   @relation(fields: [userid], references: [id])
+    user   User   @relation(fields: [userid], references: [id])
 }
 
 model VerificationToken {
@@ -214,6 +215,9 @@ enum Action {
     MESSAGE_SEND
     CREATE_VOICE_CHANNEL
     CREATE_TEXT_CHANNEL
+    DELETE_ROLE
+    CREATE_ROLE
+    UPDATE_ROLE
     DELETE_VOICE_CHANNEL
     DELETE_TEXT_CHANNEL
     JOIN_VOICE_CHANNEL

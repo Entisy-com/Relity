@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {

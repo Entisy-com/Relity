@@ -14,7 +14,11 @@ export const userRouter = router({
         where: { id: input.serverId },
       });
       if (!server) throw new TRPCError({ code: "NOT_FOUND" });
-      const update = await ctx.prisma.server.update({
+      const everyoneRole = await ctx.prisma.role.findFirst({
+        where: { serverid: input.serverId, name: "everyone" },
+      });
+      if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
+      await ctx.prisma.server.update({
         where: {
           id: input.serverId,
         },
@@ -27,7 +31,20 @@ export const userRouter = router({
         },
       });
 
-      ee.emit("joinServer", server);
+      const update = await ctx.prisma.user.update({
+        where: {
+          id: input.userId,
+        },
+        data: {
+          roles: {
+            connect: {
+              id: everyoneRole.id,
+            },
+          },
+        },
+      });
+
+      ee.emit("joinServer", update);
       return update;
     }),
   onJoinServer: protectedProcedure.subscription(() => {
@@ -36,6 +53,46 @@ export const userRouter = router({
       ee.on("joinServer", onJoin);
       return () => {
         ee.off("joinServer", onJoin);
+      };
+    });
+  }),
+  leaveServer: protectedProcedure
+    .input(z.object({ userId: z.string(), serverId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: input.userId },
+      });
+      if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+      await ctx.prisma.server.update({
+        where: { id: input.serverId },
+        data: { users: { disconnect: { id: input.userId } } },
+      });
+      const everyoneRole = await ctx.prisma.role.findFirst({
+        where: { serverid: input.serverId, name: "everyone" },
+      });
+      if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
+      const update = await ctx.prisma.user.update({
+        where: {
+          id: input.userId,
+        },
+        data: {
+          roles: {
+            disconnect: {
+              id: everyoneRole.id,
+            },
+          },
+        },
+      });
+
+      ee.emit("leaveServer", update);
+      return update;
+    }),
+  onLeaveServer: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onJoin = (data: User) => emit.next(data);
+      ee.on("leaveServer", onJoin);
+      return () => {
+        ee.off("leaveServer", onJoin);
       };
     });
   }),

@@ -9,7 +9,12 @@ export type Server = Prisma.ServerGetPayload<{
     textchannel: true;
     users: true;
     voicechannel: true;
-    ActionLog: true;
+    actionLog: {
+      include: {
+        actions: true;
+        server: true;
+      };
+    };
   };
 }>;
 
@@ -92,7 +97,7 @@ export type Session = Prisma.SessionGetPayload<{
 
 export type UserSettings = Prisma.UserSettingsGetPayload<{
   include: {
-    User: true;
+    user: true;
   };
 }>;
 
@@ -108,7 +113,11 @@ export const PermissionOptions = [
 
 export type ActionLog = Prisma.ActionLogGetPayload<{
   include: {
-    actions: true;
+    actions: {
+      include: {
+        user: true;
+      };
+    };
     server: true;
   };
 }>;

@@ -2,9 +2,10 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import { Server } from "../../../types";
+import { ActionType, Server } from "../../../types";
 import { userAgent } from "next/server";
 import { TRPCError } from "@trpc/server";
+import { Action } from "@prisma/client";
 
 const ee = new EventEmitter();
 
@@ -30,15 +31,30 @@ export const serverRouter = router({
               name: "General",
             },
           },
+          voicechannel: {
+            create: {
+              name: "General",
+            },
+          },
           roles: {
             create: {
               name: "everyone",
-              color: "#fff",
+              color: "#ffffff",
               visible: false,
               permissions: ["READ_MESSAGES", "SEND_MESSAGES"],
               users: { connect: { id: ctx.session.user.id } },
             },
           },
+        },
+        include: {
+          textchannel: true,
+          voicechannel: true,
+          categories: true,
+          roles: true,
+          actionLog: true,
+          bannedUser: true,
+          owner: true,
+          users: true,
         },
       });
       ee.emit("addServer", server);
@@ -79,50 +95,38 @@ export const serverRouter = router({
           voicechannel: true,
           categories: true,
           roles: true,
+          actionLog: true,
+          bannedUser: true,
+          owner: true,
+          users: true,
         },
       });
       if (!server) throw new TRPCError({ code: "NOT_FOUND" });
       (server.textchannel ?? []).forEach(async (channel) => {
+        await ctx.prisma.message.deleteMany({
+          where: {
+            textChannelId: channel.id,
+          },
+        });
         await ctx.prisma.textChannel.delete({
           where: {
             id: channel.id,
           },
         });
       });
-      (server.voicechannel ?? []).forEach(async (channel) => {
-        await ctx.prisma.voiceChannel.delete({
-          where: {
-            id: channel.id,
-          },
-        });
-      });
-      (server.categories ?? []).forEach(async (category) => {
-        await ctx.prisma.category.delete({
-          where: {
-            id: category.id,
-          },
-        });
-      });
-      (server.roles ?? []).forEach(async (role) => {
-        await ctx.prisma.role.delete({
-          where: {
-            id: role.id,
-          },
-        });
-      });
       await ctx.prisma.voiceChannel.deleteMany({
         where: {
-          serverid: input.id,
+          serverid: server.id,
         },
       });
       await ctx.prisma.category.deleteMany({
         where: {
-          serverid: input.id,
+          serverid: server.id,
         },
       });
       await ctx.prisma.role.deleteMany({
         where: {
-          serverid: input.id,
+          serverid: server.id,
         },
       });
       const deleteServer = await ctx.prisma.server.delete({
@@ -169,12 +173,13 @@ export const serverRouter = router({
         },
         include: {
           textchannel: true,
-          bannedUser: true,
-          categories: true,
-          owner: true,
-          roles: true,
-          users: true,
           voicechannel: true,
+          categories: true,
+          roles: true,
+          actionLog: true,
+          bannedUser: true,
+          owner: true,
+          users: true,
         },
       });
       return server;
@@ -199,7 +204,7 @@ export const serverRouter = router({
           roles: true,
           users: true,
           voicechannel: true,
-          ActionLog: true,
+          actionLog: true,
         },
         take: limit + 1,
         where: { users: { some: { id: input.userid } } },
@@ -219,5 +224,68 @@ export const serverRouter = router({
         servers: servers.reverse(),
         nextCursor,
       };
+    }),
+  addActionToActionLog: protectedProcedure
+    .input(
+      z.object({
+        serverid: z.string(),
+        action: z.nativeEnum(Action),
+        userid: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const update = await ctx.prisma.actionType.create({
+        data: {
+          action: input.action,
+          actionlog: {
+            connectOrCreate: {
+              where: {
+                serverId: input.serverid,
+              },
+              create: {
+                server: {
+                  connect: {
+                    id: input.serverid,
+                  },
+                },
+              },
+            },
+          },
+          user: {
+            connect: {
+              id: input.userid,
+            },
+          },
+        },
+      });
+      ee.emit("updatedLog", update);
+      return update;
+    }),
+  onAddActionToActionLog: protectedProcedure.subscription(() => {
+    return observable<ActionType>((emit) => {
+      const onCreate = (data: ActionType) => emit.next(data);
+      ee.on("updatedLog", onCreate);
+      return () => {
+        ee.off("updatedLog", onCreate);
+      };
+    });
+  }),
+  getActionLogFromServer: protectedProcedure
+    .input(z.object({ serverId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const log = await ctx.prisma.actionLog.findFirst({
+        where: {
+          serverId: input.serverId,
+        },
+        include: {
+          actions: {
+            include: {
+              user: true,
+            },
+          },
+          server: true,
+        },
+      });
+      return log;
     }),
 });

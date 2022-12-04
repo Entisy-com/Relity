@@ -61,6 +61,19 @@ const ServerList: FC<Props> = ({ user }) => {
       );
     });
   }, []);
+  const removeServer = useCallback((incoming: Server) => {
+    setServer((current) => {
+      const map: Record<Server["id"], Server> = {};
+      for (const serv of current ?? []) {
+        if (serv.id !== incoming.id) map[serv.id] = serv;
+      }
+
+      return Object.values(map).sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    });
+  }, []);
 
   useEffect(() => {
     const servers = serverQuery.data?.pages.map((page) => page.servers).flat();
@@ -73,7 +86,6 @@ const ServerList: FC<Props> = ({ user }) => {
     },
     onError(err) {
       console.error("Subscription error:", err);
-      // we might have missed a message - invalidate cache
       utils.server.getServers.invalidate();
     },
   });
@@ -81,6 +93,15 @@ const ServerList: FC<Props> = ({ user }) => {
     onData(server) {
       if (server.id === selectedServer?.id) setServerName(server.name);
       setServerImage(serverImage);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+      utils.server.getServerById.invalidate();
+    },
+  });
+  trpc.server.onServerDelete.useSubscription(undefined, {
+    onData(server) {
+      removeServer(server);
     },
     onError(err) {
       console.error("Subscription error:", err);
@@ -112,7 +133,7 @@ const ServerList: FC<Props> = ({ user }) => {
       return;
     if (deleteRef.current.value.trim() !== selectedServer?.name.trim()) return;
     deleteServer.mutate({ id: selectedServer?.id! });
-    // window.location.href = "/";
+    window.location.href = "/";
   }
 
   async function handleChangeImage(file: File) {
@@ -268,7 +289,6 @@ const ServerList: FC<Props> = ({ user }) => {
             handleCreateServer();
           }}
         />
-        <ModalColorPicker />
       </Modal>
       <Modal
         blur
