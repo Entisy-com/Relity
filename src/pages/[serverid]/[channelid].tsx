@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
-import type { Server, TextChannel, Prisma } from "@prisma/client";
+import type { Server, TextChannel } from "@prisma/client";
 import type { GetServerSidePropsContext, NextPage } from "next";
 import { useSession } from "next-auth/react";
 import ServerInfo from "../../components/ServerInfo";
@@ -16,15 +17,7 @@ import ModalTitle from "../../components/modal/ModalTitle";
 import ModalText from "../../components/modal/ModalText";
 import ModalButton from "../../components/modal/ModalButton";
 import styles from "../../styles/pages/[channelid].module.scss";
-
-type Message = Prisma.MessageGetPayload<{
-  include: {
-    author: true;
-    mentionedRoles: true;
-    mentionedUser: true;
-    textChannel: true;
-  };
-}>;
+import type { Message } from "../../types";
 
 type Props = {
   server: Server;

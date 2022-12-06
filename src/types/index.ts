@@ -78,11 +78,21 @@ export type VoiceChannel = Prisma.VoiceChannelGetPayload<{
 
 export type Message = Prisma.MessageGetPayload<{
   include: {
-    author: true;
-    mentionedMembers: true;
+    author: {
+      include: {
+        voiceChannel: true;
+        user: true;
+        actionType: true;
+        mentionedIn: true;
+        messages: true;
+        ownerOf: true;
+        roles: true;
+        server: true;
+      };
+    };
     mentionedRoles: true;
+    mentionedMembers: true;
     textChannel: true;
-    voiceChannel: true;
   };
 }>;
 

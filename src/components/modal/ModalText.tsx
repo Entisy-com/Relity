@@ -1,4 +1,5 @@
-import { FC } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { FC } from "react";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {

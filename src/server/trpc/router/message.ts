@@ -32,7 +32,21 @@ export const messageRouter = router({
           },
         },
         include: {
-          author: true,
+          author: {
+            include: {
+              voiceChannel: true,
+              user: true,
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+            },
+          },
+          mentionedRoles: true,
+          mentionedMembers: true,
+          textChannel: true,
         },
       });
       ee.emit("addMessage", message);
@@ -56,6 +70,23 @@ export const messageRouter = router({
     .mutation(async ({ ctx, input }) => {
       const message = await ctx.prisma.message.delete({
         where: { id: input.id },
+        include: {
+          author: {
+            include: {
+              voiceChannel: true,
+              user: true,
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+            },
+          },
+          mentionedRoles: true,
+          mentionedMembers: true,
+          textChannel: true,
+        },
       });
       ee.emit("removeMessage", message);
       return message;
@@ -77,9 +108,20 @@ export const messageRouter = router({
           id: input.id,
         },
         include: {
-          author: true,
-          mentionedMembers: true,
+          author: {
+            include: {
+              voiceChannel: true,
+              user: true,
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+            },
+          },
           mentionedRoles: true,
+          mentionedMembers: true,
           textChannel: true,
         },
       });
