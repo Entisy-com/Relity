@@ -1,28 +1,36 @@
-import type { Prisma } from "@prisma/client";
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+import type { FC } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
 import Image from "next/image";
 import { trpc } from "../utils/trpc";
-import { User } from "next-auth";
+import type { User } from "next-auth";
 import { CDN_API_URL, CDN_BASE_URL, LOGGER_URL } from "../utils/constants";
 import axios from "axios";
 import {
   Modal,
   ModalButton,
-  ModalColorPicker,
   ModalFileSelect,
   ModalImage,
   ModalInput,
   ModalText,
   ModalTitle,
 } from "./modal";
-import { Server } from "../types";
+import type { Server } from "../types";
 
 type Props = {
   user: User;
 };
 
 const ServerList: FC<Props> = ({ user }) => {
+  const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
+  const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
+  const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<Server>();
+
   const serverQuery = trpc.server.getServers.useInfiniteQuery(
     { userid: user.id },
     { getPreviousPageParam: (d) => d.nextCursor }
@@ -48,11 +56,14 @@ const ServerList: FC<Props> = ({ user }) => {
         map[serv.id] = serv;
       }
       for (const serv of incoming ?? []) {
-        if (serv.ownerid === user.id) map[serv.id] = serv;
+        for (const m of serv.members ?? []) {
+          if (m.userId === user.id)
+            if (m.id === serv.ownerid) map[serv.id] = serv;
+        }
       }
       for (const serv of incoming ?? []) {
-        for (let u of serv?.users ?? [])
-          if (u.id === user.id) map[serv.id] = serv;
+        for (const m of serv.members ?? [])
+          if (m.userId === user.id) map[serv.id] = serv;
       }
 
       return Object.values(map).sort(
@@ -167,10 +178,6 @@ const ServerList: FC<Props> = ({ user }) => {
       message: `Updated server Icon on "${selectedServer?.name}"`,
     });
   }
-  const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
-  const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
-  const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
-  const [selectedServer, setSelectedServer] = useState<Server>();
 
   return (
     <>

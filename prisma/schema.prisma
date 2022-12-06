@@ -87,14 +87,14 @@ model Role {
 model Server {
     id           String         @id @default(cuid())
     name         String
-    ownerid      String
+    ownerid      String         @unique
     pfp          String         @default("")
     banner       String         @default("")
     categories   Category[]
     roles        Role[]
     textchannel  TextChannel[]
     voicechannel VoiceChannel[]
-    owner        Member         @relation("ownerOf", fields: [ownerid], references: [id])
+    owner        Member         @relation("ownerOf", fields: [ownerid], references: [id], onDelete: Cascade)
     members      Member[]       @relation("members")
     bannedUser   User[]         @relation("bannedusers")
     actionLog    ActionLog?
@@ -138,14 +138,14 @@ model Member {
     banner         String        @default("")
     nickname       String        @default("")
     roles          Role[]
-    ownerOf        Server[]      @relation("ownerOf")
-    server         Server        @relation("members", fields: [serverId], references: [id], onDelete: Cascade)
+    ownerOf        Server?       @relation("ownerOf")
+    server         Server?       @relation("members", fields: [serverId], references: [id], onDelete: Cascade)
     actionType     ActionType[]
     mentionedIn    Message[]     @relation("mentions")
     messages       Message[]     @relation("messagesSent")
     voiceChannel   VoiceChannel? @relation(fields: [voiceChannelId], references: [id])
     voiceChannelId String?
-    serverId       String
+    serverId       String?
 }
 
 model User {

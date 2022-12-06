@@ -6,6 +6,7 @@ type Props = {
   value: string;
   title?: string;
   ref?: any;
+  props?: any[];
 };
 const ModalText: FC<Props> = ({ ref, value, title, ...props }) => {
   return (

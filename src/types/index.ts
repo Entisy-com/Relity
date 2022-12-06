@@ -3,23 +3,56 @@ import { Permission } from "@prisma/client";
 
 export type Server = Prisma.ServerGetPayload<{
   include: {
-    bannedUser: true;
-    categories: true;
+    textchannel: {
+      include: {
+        category: true;
+        messages: true;
+        server: true;
+      };
+    };
+    bannedUser: {
+      include: {
+        adminuser: true;
+        bannedon: true;
+        friends: true;
+        friendsWith: true;
+        member: true;
+        settings: true;
+      };
+    };
+    categories: {
+      include: {
+        server: true;
+        textchannels: true;
+        voicechannels: true;
+      };
+    };
     owner: {
       include: {
-        user: true;
-        server: true;
-        ownerOf: true;
         actionType: true;
         mentionedIn: true;
         messages: true;
+        ownerOf: true;
         roles: true;
+        server: true;
+        user: true;
         voiceChannel: true;
       };
     };
-    roles: true;
-    textchannel: true;
-    voicechannel: true;
+    roles: {
+      include: {
+        members: true;
+        mentionedIn: true;
+        server: true;
+      };
+    };
+    voicechannel: {
+      include: {
+        category: true;
+        members: true;
+        server: true;
+      };
+    };
     actionLog: {
       include: {
         actions: true;
@@ -31,9 +64,9 @@ export type Server = Prisma.ServerGetPayload<{
         actionType: true;
         mentionedIn: true;
         messages: true;
-        server: true;
         ownerOf: true;
         roles: true;
+        server: true;
         user: true;
         voiceChannel: true;
       };

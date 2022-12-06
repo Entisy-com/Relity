@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:startup": "yarn cdn:dev && yarn cdn:http && yarn dev:wss && yarn dev:next",
     "cdn:http": "cd ./src/fileserver/cdn && http-server -p 4200 --cors",
     "cdn:start": "node ./src/fileserver/server.js",
     "cdn:dev": "nodemon ./src/fileserver/server.js",
@@ -14,9 +13,9 @@
     "db:push": "npx prisma db push",
     "db:stop": "docker compose down",
     "logger:start": "node ./src/utils/logReceiver.js",
+    "dev:wss": "cross-env PORT=3001 NODE_ENV=development NEXTAUTH_URL=http://localhost:3000/api/v1/auth tsx watch src/server/trpc/wssDevServer.ts --tsconfig tsconfig.server.json ",
     "build": "next build",
     "dev:next": "next dev",
-    "dev:wss": "cross-env PORT=3001 NODE_ENV=development NEXTAUTH_URL=http://localhost:3000/api/v1/auth tsx watch src/server/trpc/wssDevServer.ts --tsconfig tsconfig.server.json ",
     "postinstall": "prisma generate",
     "lint": "next lint",
     "start": "next start"
@@ -37,6 +36,7 @@
     "crypto-js": "^4.1.1",
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
+    "http-server": "^14.1.1",
     "next": "13.0.2",
     "next-auth": "^4.15.1",
     "node-fetch": "^3.3.0",

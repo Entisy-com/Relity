@@ -8,16 +8,16 @@ import ModalButton from "./modal/ModalButton";
 import ModalText from "./modal/ModalText";
 import { BASE_URL } from "../utils/constants";
 import { OnlineStatus } from "@prisma/client";
-import type { Member } from "../types";
+import type { User } from "../types";
 
 type Props = {
-  member: Member;
+  user: User;
 };
 
-const Profile: FC<Props> = ({ member }) => {
+const Profile: FC<Props> = ({ user }) => {
   const [open, setOpen] = useState(false);
 
-  if (!member) return <></>;
+  if (!user) return <></>;
 
   return (
     <>
@@ -29,23 +29,12 @@ const Profile: FC<Props> = ({ member }) => {
         }}
         onContextMenu={() => setOpen(true)}
       >
-        {member.pfp ? (
+        {user.image ? (
           <div className={styles.image}>
             {/* user.status is undefined */}
-            {member.user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
+            {user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
             <img
-              src={member.pfp}
-              alt="Profile Picture"
-              width={32}
-              height={32}
-            />
-          </div>
-        ) : member.user.image ? (
-          <div className={styles.image}>
-            {/* user.status is undefined */}
-            {member.user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
-            <img
-              src={member.user.image}
+              src={user.image}
               alt="Profile Picture"
               width={32}
               height={32}
@@ -63,14 +52,9 @@ const Profile: FC<Props> = ({ member }) => {
         )}
       </div>
       <Modal blur closable open={open} setOpen={setOpen}>
-        <ModalTitle value={`Name: ${member.nickname ?? member.user.name}`} />
-        <ModalText
-          value={`Id: ${member.id}`}
-          title={`Userid: ${member.userId}`}
-        />
-        <ModalText
-          value={member.user.email ? `Email: ${member.user.email}` : ""}
-        />
+        <ModalTitle value={`Name: ${user.name}`} />
+        <ModalText value={`Id: ${user.id}`} />
+        <ModalText value={user.email ? `Email: ${user.email}` : ""} />
         <ModalButton
           value="Settings"
           onClick={() => (window.location.href = "/settings")}
