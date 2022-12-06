@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-empty-function */
 import Link from "next/link";
 import styles from "../styles/pages/login.module.scss";
 import type { GetServerSidePropsContext, NextPage } from "next";

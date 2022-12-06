@@ -1,5 +1,8 @@
-import { Server } from "@prisma/client";
-import { GetServerSidePropsContext, NextPage } from "next";
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import type { Server } from "@prisma/client";
+import type { GetServerSidePropsContext, NextPage } from "next";
 import { useSession } from "next-auth/react";
 import Modal from "../../components/modal/Modal";
 import ModalButton from "../../components/modal/ModalButton";
@@ -39,7 +42,7 @@ const Invite: NextPage<Props> = ({ server }) => {
     <div className={styles.wrapper}>
       <Modal open={true} setOpen={() => {}} blur>
         <ModalTitle value={allData.name} />
-        <ModalText value={`${allData.users.length} Members`} />
+        <ModalText value={`${allData.members.length} Members`} />
         <ModalButton onClick={() => joinServer()} value="Join Server!" />
       </Modal>
     </div>

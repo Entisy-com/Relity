@@ -1,23 +1,23 @@
-import { useSession } from "next-auth/react";
-import { FC, useState } from "react";
+/* eslint-disable @next/next/no-img-element */
+import type { FC } from "react";
+import { useState } from "react";
 import Modal from "./modal/Modal";
 import ModalTitle from "./modal/ModalTitle";
 import styles from "../styles/components/profile.module.scss";
 import ModalButton from "./modal/ModalButton";
 import ModalText from "./modal/ModalText";
 import { BASE_URL } from "../utils/constants";
-import { trpc } from "../utils/trpc";
 import { OnlineStatus } from "@prisma/client";
-import { User } from "@prisma/client";
+import type { Member } from "../types";
 
 type Props = {
-  user: User;
+  member: Member;
 };
 
-const Profile: FC<Props> = ({ user }) => {
+const Profile: FC<Props> = ({ member }) => {
   const [open, setOpen] = useState(false);
 
-  if (!user) return <></>;
+  if (!member) return <></>;
 
   return (
     <>
@@ -29,12 +29,23 @@ const Profile: FC<Props> = ({ user }) => {
         }}
         onContextMenu={() => setOpen(true)}
       >
-        {user.image ? (
+        {member.pfp ? (
           <div className={styles.image}>
             {/* user.status is undefined */}
-            {user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
+            {member.user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
             <img
-              src={user.image}
+              src={member.pfp}
+              alt="Profile Picture"
+              width={32}
+              height={32}
+            />
+          </div>
+        ) : member.user.image ? (
+          <div className={styles.image}>
+            {/* user.status is undefined */}
+            {member.user.status === OnlineStatus.ONLINE && <p>ONLINE</p>}
+            <img
+              src={member.user.image}
               alt="Profile Picture"
               width={32}
               height={32}
@@ -52,9 +63,14 @@ const Profile: FC<Props> = ({ user }) => {
         )}
       </div>
       <Modal blur closable open={open} setOpen={setOpen}>
-        <ModalTitle value={user.name ? `Name: ${user.name}` : ""} />
-        <ModalText value={`Id: ${user.id}`} />
-        <ModalText value={user.email ? `Email: ${user.email}` : ""} />
+        <ModalTitle value={`Name: ${member.nickname ?? member.user.name}`} />
+        <ModalText
+          value={`Id: ${member.id}`}
+          title={`Userid: ${member.userId}`}
+        />
+        <ModalText
+          value={member.user.email ? `Email: ${member.user.email}` : ""}
+        />
         <ModalButton
           value="Settings"
           onClick={() => (window.location.href = "/settings")}

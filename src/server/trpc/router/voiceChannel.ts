@@ -1,10 +1,9 @@
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
-import { VoiceChannel } from "../../../types";
+import type { VoiceChannel } from "../../../types";
 
 const ee = new EventEmitter();
 
@@ -23,7 +22,7 @@ export const voiceChannelRouter = router({
         },
 
         include: {
-          users: true,
+          members: true,
           category: true,
           server: true,
         },
@@ -50,7 +49,7 @@ export const voiceChannelRouter = router({
         },
 
         include: {
-          users: true,
+          members: true,
           category: true,
           server: true,
         },
@@ -68,7 +67,7 @@ export const voiceChannelRouter = router({
     });
   }),
   leaveChannel: protectedProcedure
-    .input(z.object({ userId: z.string(), channelId: z.string() }))
+    .input(z.object({ memberId: z.string(), channelId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const channel = await ctx.prisma.voiceChannel.findUnique({
         where: { id: input.channelId },
@@ -79,15 +78,15 @@ export const voiceChannelRouter = router({
           id: input.channelId,
         },
         data: {
-          users: {
+          members: {
             disconnect: {
-              id: input.userId,
+              id: input.memberId,
             },
           },
         },
 
         include: {
-          users: true,
+          members: true,
           category: true,
           server: true,
         },
@@ -106,7 +105,7 @@ export const voiceChannelRouter = router({
     });
   }),
   joinChannel: protectedProcedure
-    .input(z.object({ userId: z.string(), channelId: z.string() }))
+    .input(z.object({ memberId: z.string(), channelId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const channel = await ctx.prisma.voiceChannel.findUnique({
         where: { id: input.channelId },
@@ -117,14 +116,14 @@ export const voiceChannelRouter = router({
           id: input.channelId,
         },
         data: {
-          users: {
+          members: {
             connect: {
-              id: input.userId,
+              id: input.memberId,
             },
           },
         },
         include: {
-          users: true,
+          members: true,
           category: true,
           server: true,
         },
@@ -152,7 +151,7 @@ export const voiceChannelRouter = router({
         include: {
           server: true,
           category: true,
-          users: true,
+          members: true,
         },
       });
       return channel;
@@ -174,7 +173,7 @@ export const voiceChannelRouter = router({
         include: {
           category: true,
           server: true,
-          users: true,
+          members: true,
         },
         cursor: cursor
           ? {

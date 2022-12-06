@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import Modal from "../components/modal/Modal";
 import ModalButton from "../components/modal/ModalButton";
 import ModalCheckbox from "../components/modal/ModalCheckbox";

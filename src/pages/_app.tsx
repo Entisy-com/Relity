@@ -6,9 +6,6 @@ import { trpc } from "../utils/trpc";
 
 import "../styles/globals.scss";
 import { useEffect } from "react";
-import axios from "axios";
-import { HEARTBEAT_URL } from "../utils/constants";
-import { OnlineStatus } from "@prisma/client";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,

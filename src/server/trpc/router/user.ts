@@ -3,7 +3,7 @@ import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import { User } from "../../../types";
+import type { User, Member } from "../../../types";
 import { OnlineStatus } from "@prisma/client";
 
 const ee = new EventEmitter();
@@ -19,12 +19,14 @@ export const userRouter = router({
         where: { serverid: input.serverId, name: "everyone" },
       });
       if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
-      await ctx.prisma.server.update({
-        where: {
-          id: input.serverId,
-        },
+      const member = await ctx.prisma.member.create({
         data: {
-          users: {
+          server: {
+            connect: {
+              id: server.id,
+            },
+          },
+          user: {
             connect: {
               id: input.userId,
             },
@@ -32,9 +34,9 @@ export const userRouter = router({
         },
       });
 
-      const update = await ctx.prisma.user.update({
+      const update = await ctx.prisma.member.update({
         where: {
-          id: input.userId,
+          id: member.id,
         },
         data: {
           roles: {
@@ -89,24 +91,53 @@ export const userRouter = router({
       };
     });
   }),
-  leaveServer: protectedProcedure
-    .input(z.object({ userId: z.string(), serverId: z.string() }))
+  updateMember: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        image: z.string().optional(),
+        banner: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: input.userId },
+      const update = await ctx.prisma.member.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          pfp: input.image,
+          nickname: input.name,
+          banner: input.banner,
+        },
       });
-      if (!user) throw new TRPCError({ code: "NOT_FOUND" });
-      await ctx.prisma.server.update({
-        where: { id: input.serverId },
-        data: { users: { disconnect: { id: input.userId } } },
+      ee.emit("updateMember", update);
+      return update;
+    }),
+  onUpdateMember: protectedProcedure.subscription(() => {
+    return observable<Member>((emit) => {
+      const onUpdate = (data: Member) => emit.next(data);
+      ee.on("updateMember", onUpdate);
+      return () => {
+        ee.off("updateMember", onUpdate);
+      };
+    });
+  }),
+  leaveServer: protectedProcedure
+    .input(z.object({ memberId: z.string(), serverId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const member = await ctx.prisma.member.findUnique({
+        where: { id: input.memberId },
       });
+      if (!member) throw new TRPCError({ code: "NOT_FOUND" });
+
       const everyoneRole = await ctx.prisma.role.findFirst({
         where: { serverid: input.serverId, name: "everyone" },
       });
       if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
-      const update = await ctx.prisma.user.update({
+      const update = await ctx.prisma.member.update({
         where: {
-          id: input.userId,
+          id: input.memberId,
         },
         data: {
           roles: {
@@ -116,41 +147,76 @@ export const userRouter = router({
           },
         },
       });
-
+      await ctx.prisma.member.delete({
+        where: { id: input.memberId },
+      });
       ee.emit("leaveServer", update);
       return update;
     }),
   onLeaveServer: protectedProcedure.subscription(() => {
-    return observable<User>((emit) => {
-      const onJoin = (data: User) => emit.next(data);
+    return observable<Member>((emit) => {
+      const onJoin = (data: Member) => emit.next(data);
       ee.on("leaveServer", onJoin);
       return () => {
         ee.off("leaveServer", onJoin);
       };
     });
   }),
-  getUser: protectedProcedure
+  getUserById: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ input, ctx }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: input.userId },
         include: {
-          accounts: true,
           adminuser: true,
           bannedon: true,
           friends: true,
           friendsWith: true,
-          mentionedin: true,
-          messages: true,
-          ownerof: true,
-          roles: true,
-          server: true,
-          sessions: true,
           settings: true,
-          voicechannel: true,
+          member: true,
           // add status after migrate
         },
       });
-      return { user };
+      return user;
+    }),
+  getMemberById: protectedProcedure
+    .input(z.object({ memberId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const user = await ctx.prisma.member.findUnique({
+        where: { id: input.memberId },
+        include: {
+          actionType: true,
+          mentionedIn: true,
+          messages: true,
+          ownerOf: true,
+          roles: true,
+          server: true,
+          user: true,
+          voiceChannel: true,
+        },
+      });
+      return user;
+    }),
+  getMemberByUserId: protectedProcedure
+    .input(z.object({ userId: z.string(), serverId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const member = await ctx.prisma.member.findFirst({
+        where: {
+          serverId: input.serverId,
+          userId: input.userId,
+        },
+        include: {
+          actionType: true,
+          mentionedIn: true,
+          messages: true,
+          ownerOf: true,
+          roles: true,
+          server: true,
+          user: true,
+          voiceChannel: true,
+        },
+      });
+      if (!member) throw new TRPCError({ code: "NOT_FOUND" });
+      return member;
     }),
 });

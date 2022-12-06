@@ -1,4 +1,9 @@
-import { GetServerSidePropsContext, NextPage } from "next";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import type { GetServerSidePropsContext, NextPage } from "next";
 import { useCallback, useRef, useState } from "react";
 import styles from "../../styles/pages/settings.module.scss";
 import serverStyles from "../../styles/pages/serverSettings.module.scss";
@@ -9,9 +14,11 @@ import ModalInput from "../../components/modal/ModalInput";
 import ModalButton from "../../components/modal/ModalButton";
 import ModalTitle from "../../components/modal/ModalTitle";
 import ModalDropdown from "../../components/modal/ModalDropdown";
-import { Role, User, Permission, Action } from "@prisma/client";
-import { ActionLog, PermissionOptions, Server } from "../../types";
-import { ActionType } from "@prisma/client";
+import type { Role, User, Permission } from "@prisma/client";
+import { Action } from "@prisma/client";
+import type { ActionLog, Member, Server } from "../../types";
+import { PermissionOptions } from "../../types";
+import type { ActionType } from "@prisma/client";
 import ModalCheckbox from "../../components/modal/ModalCheckbox";
 import Head from "next/head";
 import { ModalColorPicker } from "../../components/modal";
@@ -38,9 +45,9 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     useState(false);
 
   const [transferOwnershipUser, setTransferOwnershipUser] = useState(
-    server.users[0]?.id !== server.ownerid
-      ? server.users[0]?.id
-      : server.users[1]?.id
+    server.members[0]?.id !== server.ownerid
+      ? server.members[0]?.id
+      : server.members[1]?.id
   );
   const [actionLog, setActionLog] = useState(
     server.actionLog ?? ({} as ActionLog)
@@ -96,10 +103,14 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     });
     roleNameRef.current.value = "";
     setRolePermissions([]);
+    const { data: member } = trpc.user.getMemberByUserId.useQuery({
+      userId: user?.id!,
+      serverId: server.id,
+    });
     addActionToLog.mutate({
       action: Action.CREATE_ROLE,
       serverid: server.id,
-      userid: user?.id!,
+      memberId: member?.id!,
     });
   }
 
@@ -140,9 +151,20 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     setEditRoleModalOpen(false);
   }
 
-  if (!server || !server.owner || !server.users) return <></>;
+  if (!server || !server.owner || !server.members) return <></>;
 
-  const sortMembers = (a: User, b: User) => {
+  const sortMembers = (a: Member, b: Member) => {
+    //Checkt ob a und b nen nicknamen haben und sortiert anhand diesem und hat auch die fälle für wenn einer oder keiner einen nickname hat
+    return a.nickname
+      ? b.nickname
+        ? a.nickname.localeCompare(b.nickname)
+        : a.nickname.localeCompare(b.user.name)
+      : b.nickname
+      ? a.user.name.localeCompare(b.nickname)
+      : a.user.name.localeCompare(b.user.name);
+  };
+
+  const sortUsers = (a: User, b: User) => {
     return a.name.localeCompare(b.name);
   };
   const sortRoles = (a: Role, b: Role) => {
@@ -172,7 +194,9 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
             <h1 className={styles.option_title}>Info</h1>
             <div>
               <h3>Name: {server.name!}</h3>
-              <h3>Owner: {server.owner.name}</h3>
+              <h3 title={server.owner.user.name}>
+                Owner: {server.owner.nickname}
+              </h3>
               <h3
                 title={`Textchannel: ${
                   server.textchannel.length ?? 0
@@ -181,7 +205,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
                 Channel count:{" "}
                 {server.textchannel.length + server.voicechannel.length ?? 0}
               </h3>
-              <h3>Member count: {server.users.length ?? 0}</h3>
+              <h3>Member count: {server.members.length ?? 0}</h3>
               <h3>Created at: {dateString}</h3>
               <p id={styles.gap} />
               <p id={styles.separator} />
@@ -237,9 +261,11 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           <div id="member" className={styles.option}>
             <h1 className={styles.option_title}>Member</h1>
             <div>
-              {server.users.sort(sortMembers).map((user) => (
-                <p key={user.id}>{user.name}</p>
-              ))}
+              {server.members
+                .sort((a: any, b: any) => sortMembers(a, b))
+                .map((user) => (
+                  <p key={user.id}>{user.nickname ?? user.user.name}</p>
+                ))}
             </div>
           </div>
           <div id="action_log" className={styles.option}>
@@ -258,7 +284,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
                 return (
                   <div key={action.id}>
                     <p>
-                      {action.user.name}: {action.action} at {date}
+                      {action.member.user.name}: {action.action} at {date}
                     </p>
                   </div>
                 );
@@ -268,7 +294,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           <div id="banned_user" className={styles.option}>
             <h1 className={styles.option_title}>Banned User</h1>
             <div>
-              {server.bannedUser.sort(sortMembers).map((member) => (
+              {server.bannedUser.sort(sortUsers).map((member) => (
                 <p key={member.id}>{member.name}</p>
               ))}
             </div>
@@ -435,19 +461,23 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
         <ModalTitle value="Transfer Ownership" />
         <ModalDropdown
           defaultValue={
-            server.users[0]?.id !== server.ownerid
+            server.members[0]?.id !== server.ownerid
               ? {
-                  label: server.users[0]?.name!,
-                  value: server.users[0]?.id!,
+                  label:
+                    server.members[0]?.nickname ??
+                    server.members[0]?.user.name!,
+                  value: server.members[0]?.id!,
                 }
               : {
-                  label: server.users[1]?.name!,
-                  value: server.users[1]?.id!,
+                  label:
+                    server.members[1]?.nickname ??
+                    server.members[1]?.user.name!,
+                  value: server.members[1]?.id!,
                 }
           }
-          options={server.users.map((user) => {
-            return user.id !== server.ownerid
-              ? { label: user.name, value: user.id }
+          options={server.members.map((member) => {
+            return member.id !== server.ownerid
+              ? { label: member.nickname ?? member.user.name, value: member.id }
               : { label: null, value: null };
           })}
           onSelect={(option) => {

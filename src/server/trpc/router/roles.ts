@@ -3,8 +3,8 @@ import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
-import { Permission, Prisma } from "@prisma/client";
-import { Role } from "../../../types";
+import { Permission } from "@prisma/client";
+import type { Role } from "../../../types";
 
 const ee = new EventEmitter();
 
@@ -92,15 +92,15 @@ export const rolesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const role = await ctx.prisma.role.findUnique({
         where: { id: input.roleid },
-        include: { users: true },
+        include: { members: true },
       });
-      role?.users.forEach(async (user) => {
+      role?.members.forEach(async (member) => {
         await ctx.prisma.role.update({
           where: { id: input.roleid },
           data: {
-            users: {
+            members: {
               disconnect: {
-                id: user.id,
+                id: member.id,
               },
             },
           },

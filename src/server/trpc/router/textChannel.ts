@@ -1,10 +1,9 @@
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
-import { TextChannel } from "../../../types";
+import type { TextChannel } from "../../../types";
 
 const ee = new EventEmitter();
 

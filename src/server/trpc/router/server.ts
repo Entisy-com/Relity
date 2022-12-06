@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import { ActionType, Server } from "../../../types";
+import type { ActionType, Server } from "../../../types";
 import { TRPCError } from "@trpc/server";
 import { Action } from "@prisma/client";
 
@@ -15,6 +15,7 @@ export const serverRouter = router({
       const server = await ctx.prisma.server.create({
         data: {
           name: input.name,
+
           owner: {
             connect: {
               id: ctx.session.user.id,
@@ -43,76 +44,14 @@ export const serverRouter = router({
           },
         },
         include: {
-          textchannel: {
-            include: {
-              category: true,
-              messages: true,
-              server: true,
-            },
-          },
-          bannedUser: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              mentionedin: true,
-              messages: true,
-              ownerof: true,
-              roles: true,
-              server: true,
-              settings: true,
-              voicechannel: true,
-            },
-          },
+          textchannel: true,
+          bannedUser: true,
           categories: true,
-          owner: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              mentionedin: true,
-              messages: true,
-              ownerof: true,
-              roles: true,
-              server: true,
-              settings: true,
-              voicechannel: true,
-            },
-          },
-          roles: {
-            include: {
-              mentionedIn: true,
-              server: true,
-              user: true,
-            },
-          },
-          voicechannel: {
-            include: {
-              category: true,
-              server: true,
-              users: true,
-            },
-          },
-          actionLog: {
-            include: {
-              actions: true,
-              server: true,
-            },
-          },
-          user: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              mentionedin: true,
-              messages: true,
-              ownerof: true,
-              roles: true,
-              server: true,
-              settings: true,
-              voicechannel: true,
-            },
-          },
+          owner: true,
+          roles: true,
+          voicechannel: true,
+          actionLog: true,
+          members: true,
         },
       });
       ee.emit("addServer", server);
@@ -154,12 +93,13 @@ export const serverRouter = router({
           categories: true,
           owner: true,
           roles: true,
-          user: true,
+          members: true,
           voicechannel: true,
           actionLog: true,
         },
       });
       if (!server) throw new TRPCError({ code: "NOT_FOUND" });
+      // Deletes all Textchannel and Messages
       (server.textchannel ?? []).forEach(async (channel) => {
         await ctx.prisma.message.deleteMany({
           where: {
@@ -172,16 +112,19 @@ export const serverRouter = router({
           },
         });
       });
+      // Deletes all VoiceChannel
       await ctx.prisma.voiceChannel.deleteMany({
         where: {
           serverid: server.id,
         },
       });
+      // Deletes all Categories
       await ctx.prisma.category.deleteMany({
         where: {
           serverid: server.id,
         },
       });
+      // Deletes all Roles
       await ctx.prisma.role.deleteMany({
         where: {
           serverid: server.id,
@@ -230,14 +173,74 @@ export const serverRouter = router({
           id: input.id,
         },
         include: {
-          textchannel: true,
-          bannedUser: true,
-          categories: true,
-          owner: true,
-          roles: true,
-          voicechannel: true,
-          actionLog: true,
-          user: true,
+          textchannel: {
+            include: {
+              category: true,
+              messages: true,
+              server: true,
+            },
+          },
+          bannedUser: {
+            include: {
+              adminuser: true,
+              bannedon: true,
+              friends: true,
+              friendsWith: true,
+              member: true,
+              settings: true,
+            },
+          },
+          categories: {
+            include: {
+              server: true,
+              textchannels: true,
+              voicechannels: true,
+            },
+          },
+          owner: {
+            include: {
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+              user: true,
+              voiceChannel: true,
+            },
+          },
+          roles: {
+            include: {
+              members: true,
+              mentionedIn: true,
+              server: true,
+            },
+          },
+          voicechannel: {
+            include: {
+              category: true,
+              members: true,
+              server: true,
+            },
+          },
+          actionLog: {
+            include: {
+              actions: true,
+              server: true,
+            },
+          },
+          members: {
+            include: {
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+              user: true,
+              voiceChannel: true,
+            },
+          },
         },
       });
       return server;
@@ -261,11 +264,43 @@ export const serverRouter = router({
           owner: true,
           roles: true,
           voicechannel: true,
-          actionLog: true,
-          user: true,
+          actionLog: {
+            include: {
+              actions: {
+                include: {
+                  member: {
+                    include: {
+                      user: true,
+                      actionType: true,
+                      mentionedIn: true,
+                      messages: true,
+                      ownerOf: true,
+                      roles: true,
+                      server: true,
+                      voiceChannel: true,
+                    },
+                  },
+                  actionlog: true,
+                },
+              },
+              server: true,
+            },
+          },
+          members: {
+            include: {
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              server: true,
+              ownerOf: true,
+              roles: true,
+              user: true,
+              voiceChannel: true,
+            },
+          },
         },
         take: limit + 1,
-        where: { user: { some: { id: input.userid } } },
+        where: { members: { some: { userId: input.userid } } },
         cursor: cursor
           ? {
               id: cursor,
@@ -275,6 +310,7 @@ export const serverRouter = router({
       });
       let nextCursor: typeof cursor | undefined = undefined;
       if (servers.length > limit) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const nextServer = servers.pop()!;
         nextCursor = nextServer.id;
       }
@@ -288,7 +324,7 @@ export const serverRouter = router({
       z.object({
         serverid: z.string(),
         action: z.nativeEnum(Action),
-        userid: z.string(),
+        memberId: z.string(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -309,9 +345,9 @@ export const serverRouter = router({
               },
             },
           },
-          user: {
+          member: {
             connect: {
-              id: input.userid,
+              id: input.memberId,
             },
           },
         },
@@ -338,7 +374,19 @@ export const serverRouter = router({
         include: {
           actions: {
             include: {
-              user: true,
+              member: {
+                include: {
+                  actionType: true,
+                  mentionedIn: true,
+                  messages: true,
+                  server: true,
+                  ownerOf: true,
+                  roles: true,
+                  user: true,
+                  voiceChannel: true,
+                },
+              },
+              actionlog: true,
             },
           },
           server: true,

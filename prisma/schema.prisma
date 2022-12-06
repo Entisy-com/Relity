@@ -38,7 +38,7 @@ model VoiceChannel {
     categoryid  String?
     permissions Permission[]
     position    Int          @default(0)
-    users       User[]
+    members     Member[]
     category    Category?    @relation(fields: [categoryid], references: [id])
     server      Server       @relation(fields: [serverid], references: [id])
 }
@@ -55,18 +55,18 @@ model Category {
 }
 
 model Message {
-    id              String      @id @default(cuid())
-    content         String
-    authorId        String
-    color           String?     @default("#fff")
-    backgroundColor String?     @default("#00000000")
-    createdAt       DateTime    @default(now())
-    updatedAt       DateTime    @updatedAt
-    textChannelId   String
-    author          User        @relation(fields: [authorId], references: [id])
-    textChannel     TextChannel @relation(fields: [textChannelId], references: [id])
-    mentionedRoles  Role[]      @relation("MessageToRole")
-    mentionedUser   User[]      @relation("mentions")
+    id               String      @id @default(cuid())
+    content          String
+    authorId         String
+    color            String?     @default("#fff")
+    backgroundColor  String?     @default("#00000000")
+    createdAt        DateTime    @default(now())
+    updatedAt        DateTime    @updatedAt
+    textChannelId    String
+    author           Member      @relation(fields: [authorId], references: [id], "messagesSent")
+    textChannel      TextChannel @relation(fields: [textChannelId], references: [id])
+    mentionedRoles   Role[]      @relation("MessageToRole")
+    mentionedMembers Member[]    @relation("mentions")
 }
 
 model Role {
@@ -81,27 +81,25 @@ model Role {
     position    Int          @default(0)
     server      Server       @relation(fields: [serverid], references: [id])
     mentionedIn Message[]    @relation("MessageToRole")
-    user        User[]       @relation("RoleToUser")
+    members     Member[]
 }
 
 model Server {
     id           String         @id @default(cuid())
     name         String
     ownerid      String
-    createdAt    DateTime       @default(now())
-    updatedAt    DateTime       @updatedAt
     pfp          String         @default("")
     banner       String         @default("")
     categories   Category[]
     roles        Role[]
-    owner        User           @relation(name: "OwnerOf", fields: [userId], references: [id])
     textchannel  TextChannel[]
     voicechannel VoiceChannel[]
+    owner        Member         @relation("ownerOf", fields: [ownerid], references: [id])
+    members      Member[]       @relation("members")
     bannedUser   User[]         @relation("bannedusers")
-    user         User[]
     actionLog    ActionLog?
-    memberId     String
-    userId       String
+    updatedAt    DateTime       @updatedAt
+    createdAt    DateTime       @default(now())
 }
 
 model Account {
@@ -132,31 +130,41 @@ model Session {
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
+model Member {
     id             String        @id @default(cuid())
-    name           String
-    email          String        @unique
-    emailVerified  DateTime?
-    image          String
-    status         OnlineStatus  @default(OFFLINE)
-    createdAt      DateTime      @default(now())
-    updatedAt      DateTime      @updatedAt
-    voicechannelid String?       @map("voicechannelid")
-    accounts       Account[]
-    adminuser      AdminUser?
-    messages       Message[]
-    sessions       Session[]
-    voicechannel   VoiceChannel? @relation(fields: [voicechannelid], references: [id])
-    settings       UserSettings?
-    bannedon       Server[]      @relation("bannedusers")
-    friends        User[]        @relation("friends")
-    friendsWith    User[]        @relation("friends")
-    mentionedin    Message[]     @relation("mentions")
+    user           User          @relation(fields: [userId], references: [id])
+    userId         String
+    pfp            String        @default("")
+    banner         String        @default("")
+    nickname       String        @default("")
+    roles          Role[]
+    ownerOf        Server[]      @relation("ownerOf")
+    server         Server        @relation("members", fields: [serverId], references: [id], onDelete: Cascade)
     actionType     ActionType[]
-    roles          Role[]        @relation(name: "RoleToUser")
-    server         Server[]
-    ownerof        Server[]      @relation(name: "OwnerOf")
-    serverId       String?
+    mentionedIn    Message[]     @relation("mentions")
+    messages       Message[]     @relation("messagesSent")
+    voiceChannel   VoiceChannel? @relation(fields: [voiceChannelId], references: [id])
+    voiceChannelId String?
+    serverId       String
+}
+
+model User {
+    id            String        @id @default(cuid())
+    name          String
+    email         String        @unique
+    emailVerified DateTime?
+    image         String
+    status        OnlineStatus  @default(OFFLINE)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    accounts      Account[]
+    adminuser     AdminUser?
+    sessions      Session[]
+    settings      UserSettings?
+    bannedon      Server[]      @relation("bannedusers")
+    friends       User[]        @relation("friends")
+    friendsWith   User[]        @relation("friends")
+    member        Member[]
 }
 
 model ActionLog {
@@ -167,13 +175,13 @@ model ActionLog {
 }
 
 model ActionType {
-    id          String     @id @default(cuid())
-    user        User       @relation(fields: [userId], references: [id])
-    userId      String
+    id          String    @id @default(cuid())
+    member      Member    @relation(fields: [memberId], references: [id])
+    memberId    String
     action      Action
-    actionlog   ActionLog? @relation(fields: [actionlogid], references: [id])
-    actionlogid String?
-    createdAt   DateTime   @default(now())
+    actionlog   ActionLog @relation(fields: [actionlogid], references: [id])
+    actionlogid String
+    createdAt   DateTime  @default(now())
 }
 
 model UserSettings {
@@ -196,8 +204,11 @@ enum Permission {
     MANAGE_MEMBERS
     MANAGE_MESSAGES
     MANAGE_SERVER
+
+    // everyone Role
     READ_MESSAGES
     SEND_MESSAGES
+    // everyone Role
 }
 
 enum OnlineStatus {

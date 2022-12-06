@@ -1,4 +1,4 @@
-import { GetServerSidePropsContext, NextPage } from "next";
+import type { GetServerSidePropsContext, NextPage } from "next";
 import Profile from "../components/Profile";
 import ServerList from "../components/ServerList";
 import { trpc } from "../utils/trpc";
@@ -6,7 +6,7 @@ import { isServerAThing } from "./api/v1/getServer";
 import styles from "../styles/pages/[serverid].module.scss";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
 import ServerInfo from "../components/ServerInfo";
-import { Server, User } from "../types";
+import type { Server, User } from "../types";
 
 type Props = {
   server: Server;
@@ -41,7 +41,7 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
     ? {
         props: {
           server: JSON.parse(JSON.stringify(server)),
-          user: session?.user!,
+          user: session?.user,
         },
       }
     : { redirect: { destination: "/", persistent: false } };

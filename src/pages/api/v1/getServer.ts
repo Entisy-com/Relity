@@ -1,8 +1,7 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
-import { trpc } from "../../../utils/trpc";
-import { IncomingMessage, ServerResponse } from "http";
-
-import { getServerAuthSession } from "../../../server/common/get-server-auth-session";
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { type NextApiRequest } from "next";
+import type { IncomingMessage, ServerResponse } from "http";
 
 export const isServerAThing = async (
   req:
@@ -12,7 +11,7 @@ export const isServerAThing = async (
           [key: string]: string;
         }>;
       }),
-  res: ServerResponse<IncomingMessage>
+  _res: ServerResponse<IncomingMessage>
 ) => {
   const url = req.url?.slice(1);
   if (!(url!.toString().length > 0)) return undefined;
@@ -26,7 +25,7 @@ export const isServerAThing = async (
   const server = await prisma?.server.findUnique({
     where: { id: serverId },
     include: {
-      users: true,
+      members: true,
       owner: true,
       bannedUser: true,
       categories: true,

@@ -1,5 +1,8 @@
-import { Server, TextChannel, User, Role, Prisma } from "@prisma/client";
-import { GetServerSidePropsContext, NextPage } from "next";
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+import type { Server, TextChannel, Prisma } from "@prisma/client";
+import type { GetServerSidePropsContext, NextPage } from "next";
 import { useSession } from "next-auth/react";
 import ServerInfo from "../../components/ServerInfo";
 import ServerList from "../../components/ServerList";
@@ -35,7 +38,13 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
   const utils = trpc.useContext();
   const user = session.data?.user;
 
-  const { data: allUser } = trpc.user.getUser.useQuery({ userId: user?.id! });
+  const { data: allUser } = trpc.user.getUserById.useQuery({
+    userId: user?.id!,
+  });
+  const { data: member } = trpc.user.getMemberByUserId.useQuery({
+    userId: allUser!.id,
+    serverId: server.id,
+  });
 
   const { data: allData } = trpc.server.getServerById.useQuery({
     id: server.id,
@@ -58,25 +67,28 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     return messages;
   });
 
-  const addMessage = useCallback((incoming?: Message[]) => {
-    setMessage((current) => {
-      const map: Record<Message["id"], Message> = {};
-      for (const mess of current ?? []) {
-        map[mess.id] = mess;
-      }
-      for (const mess of incoming ?? []) {
-        map[mess.id] = mess;
-      }
-      for (const mess of incoming ?? []) {
-        if (mess.textChannelId === channel.id) map[mess.id] = mess;
-      }
+  const addMessage = useCallback(
+    (incoming?: Message[]) => {
+      setMessage((current) => {
+        const map: Record<Message["id"], Message> = {};
+        for (const mess of current ?? []) {
+          map[mess.id] = mess;
+        }
+        for (const mess of incoming ?? []) {
+          map[mess.id] = mess;
+        }
+        for (const mess of incoming ?? []) {
+          if (mess.textChannelId === channel.id) map[mess.id] = mess;
+        }
 
-      return Object.values(map).sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      );
-    });
-  }, []);
+        return Object.values(map).sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      });
+    },
+    [channel.id]
+  );
 
   useEffect(() => {
     const messages = messageQuery.data?.pages
@@ -176,13 +188,19 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
                   <div className={styles.message} key={msg.id}>
                     <img
                       className={styles.pfp}
-                      src={msg.author?.image ?? ""}
+                      src={
+                        (msg.author?.pfp
+                          ? msg.author?.pfp
+                          : msg.author.user.image) ?? ""
+                      }
                       alt=""
                       width={30}
                       height={30}
                     />
                     <div className={styles.content}>
-                      <p className={styles.name}>{msg.author?.name}</p>
+                      <p className={styles.name}>
+                        {msg.author?.nickname ?? msg.author.user}
+                      </p>
                       <p className={styles.msg}>{msg.content}</p>
                     </div>
                   </div>
@@ -235,7 +253,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
           >
             <div
               className={styles.context_menu_item}
-              onClick={(e) => {
+              onClick={() => {
                 const msg = messageRef.current!.value;
                 if (!msg) return;
                 navigator.clipboard.writeText(msg);
@@ -246,7 +264,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
             </div>
             <div
               className={styles.context_menu_item}
-              onClick={(e) => {
+              onClick={() => {
                 const msg = messageRef.current!.value;
                 if (!msg) return;
                 navigator.clipboard.writeText(msg);
@@ -256,7 +274,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
             </div>
             <div
               className={styles.context_menu_item}
-              onClick={async (e) => {
+              onClick={async () => {
                 let msg = messageRef.current!.value;
                 msg = await navigator.clipboard.readText();
                 messageRef.current!.value += msg;
@@ -270,7 +288,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
           <ServerInfo server={allData} />
         </div>
         <div className={styles.servers}>
-          <Profile user={allUser?.user!} />
+          <Profile member={member!} />
           <ServerList user={user} />
         </div>
       </div>

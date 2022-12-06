@@ -3,11 +3,12 @@ import styles from "../../styles/components/modal.module.scss";
 
 type Props = {
   value: string;
+  title?: string;
   ref?: any;
 };
-const ModalText: FC<Props> = ({ ref, value, ...props }) => {
+const ModalText: FC<Props> = ({ ref, value, title, ...props }) => {
   return (
-    <p ref={ref} className={styles.text} {...props}>
+    <p ref={ref} className={styles.text} title={title} {...props}>
       {value}
     </p>
   );

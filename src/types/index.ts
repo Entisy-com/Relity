@@ -1,86 +1,41 @@
-import { Permission, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import { Permission } from "@prisma/client";
 
 export type Server = Prisma.ServerGetPayload<{
   include: {
-    bannedUser: {
-      include: {
-        actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
-        messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
-        roles: true;
-      };
-    };
-    categories: {
-      include: {
-        server: true;
-        textchannels: true;
-        voicechannels: true;
-      };
-    };
+    bannedUser: true;
+    categories: true;
     owner: {
       include: {
-        actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
-        messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
-        roles: true;
-      };
-    };
-    roles: {
-      include: {
-        mentionedIn: true;
-        server: true;
         user: true;
-      };
-    };
-    textchannel: {
-      include: {
-        category: true;
-        messages: true;
         server: true;
-      };
-    };
-    user: {
-      include: {
+        ownerOf: true;
         actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
+        mentionedIn: true;
         messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
+        roles: true;
+        voiceChannel: true;
       };
     };
-    voicechannel: {
-      include: {
-        category: true;
-        server: true;
-        users: true;
-      };
-    };
+    roles: true;
+    textchannel: true;
+    voicechannel: true;
     actionLog: {
       include: {
         actions: true;
         server: true;
+      };
+    };
+    members: {
+      include: {
+        actionType: true;
+        mentionedIn: true;
+        messages: true;
+        server: true;
+        ownerOf: true;
+        roles: true;
+        user: true;
+        voiceChannel: true;
       };
     };
   };
@@ -88,26 +43,20 @@ export type Server = Prisma.ServerGetPayload<{
 
 export type User = Prisma.UserGetPayload<{
   include: {
-    actionType: true;
+    member: true;
     adminuser: true;
     bannedon: true;
     friends: true;
     friendsWith: true;
-    mentionedin: true;
-    messages: true;
-    ownerof: true;
-    server: true;
     settings: true;
-    voicechannel: true;
-    member: true;
   };
 }>;
 
 export type Role = Prisma.RoleGetPayload<{
   include: {
+    members: true;
     mentionedIn: true;
     server: true;
-    member: true;
   };
 }>;
 
@@ -122,59 +71,24 @@ export type TextChannel = Prisma.TextChannelGetPayload<{
 export type VoiceChannel = Prisma.VoiceChannelGetPayload<{
   include: {
     category: true;
+    members: true;
     server: true;
-    users: true;
   };
 }>;
 
 export type Message = Prisma.MessageGetPayload<{
   include: {
     author: true;
+    mentionedMembers: true;
     mentionedRoles: true;
-    mentionedUser: true;
     textChannel: true;
-  };
-}>;
-
-export type Account = Prisma.AccountGetPayload<{
-  include: {
-    user: {
-      include: {
-        actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
-        messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
-        roles: true;
-      };
-    };
+    voiceChannel: true;
   };
 }>;
 
 export type AdminUser = Prisma.AdminUserGetPayload<{
   include: {
-    user: {
-      include: {
-        actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
-        messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
-        roles: true;
-      };
-    };
+    user: true;
   };
 }>;
 
@@ -188,43 +102,13 @@ export type Category = Prisma.CategoryGetPayload<{
 
 export type Session = Prisma.SessionGetPayload<{
   include: {
-    user: {
-      include: {
-        actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
-        messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
-        roles: true;
-      };
-    };
+    user: true;
   };
 }>;
 
 export type UserSettings = Prisma.UserSettingsGetPayload<{
   include: {
-    user: {
-      include: {
-        actionType: true;
-        adminuser: true;
-        bannedon: true;
-        friends: true;
-        friendsWith: true;
-        mentionedin: true;
-        messages: true;
-        ownerof: true;
-        server: true;
-        settings: true;
-        voicechannel: true;
-        roles: true;
-      };
-    };
+    user: true;
   };
 }>;
 
@@ -242,20 +126,22 @@ export type ActionLog = Prisma.ActionLogGetPayload<{
   include: {
     actions: {
       include: {
+        actionlog: {
+          include: {
+            actions: true;
+            server: true;
+          };
+        };
         user: {
           include: {
             actionType: true;
-            adminuser: true;
-            bannedon: true;
-            friends: true;
-            friendsWith: true;
-            mentionedin: true;
+            mentionedIn: true;
             messages: true;
-            ownerof: true;
             server: true;
-            settings: true;
-            voicechannel: true;
+            ownerOf: true;
             roles: true;
+            user: true;
+            voiceChannel: true;
           };
         };
       };
@@ -272,6 +158,30 @@ export type ActionType = Prisma.ActionTypeGetPayload<{
         server: true;
       };
     };
+    user: {
+      include: {
+        actionType: true;
+        mentionedIn: true;
+        messages: true;
+        server: true;
+        ownerOf: true;
+        roles: true;
+        user: true;
+        voiceChannel: true;
+      };
+    };
+  };
+}>;
+
+export type Member = Prisma.MemberGetPayload<{
+  include: {
+    actionType: true;
+    voiceChannel: true;
+    mentionedIn: true;
+    messages: true;
+    ownerOf: true;
+    roles: true;
+    server: true;
     user: true;
   };
 }>;

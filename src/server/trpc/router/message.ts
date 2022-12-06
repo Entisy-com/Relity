@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import { Message } from "../../../types";
+import type { Message } from "../../../types";
 
 const ee = new EventEmitter();
 export const messageRouter = router({
@@ -72,12 +72,18 @@ export const messageRouter = router({
   getMessageById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const server = await ctx.prisma.message.findUnique({
+      const message = await ctx.prisma.message.findUnique({
         where: {
           id: input.id,
         },
+        include: {
+          author: true,
+          mentionedMembers: true,
+          mentionedRoles: true,
+          textChannel: true,
+        },
       });
-      return server;
+      return message;
     }),
   getMessages: protectedProcedure
     .input(
@@ -94,9 +100,20 @@ export const messageRouter = router({
         take: limit + 1,
         where: { textChannelId: input.channelId },
         include: {
-          author: true,
+          author: {
+            include: {
+              voiceChannel: true,
+              user: true,
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+            },
+          },
           mentionedRoles: true,
-          mentionedUser: true,
+          mentionedMembers: true,
           textChannel: true,
         },
         cursor: cursor
@@ -108,6 +125,7 @@ export const messageRouter = router({
       });
       let nextCursor: typeof cursor | undefined = undefined;
       if (messages.length > limit) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const nextMessage = messages.pop()!;
         nextCursor = nextMessage.id;
       }

@@ -1,14 +1,10 @@
-import { OnlineStatus, Server, User } from ".prisma/client";
+import type { User } from ".prisma/client";
 import type { GetServerSidePropsContext, NextPage } from "next";
-import { useCallback, useEffect, useState } from "react";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
 import { trpc } from "../utils/trpc";
 import styles from "../styles/pages/index.module.scss";
 import ServerList from "../components/ServerList";
 import Profile from "../components/Profile";
-import ModalDropdown from "../components/modal/ModalDropdown";
-import axios from "axios";
-import { HEARTBEAT_URL } from "../utils/constants";
 
 type Props = {
   user: User;
