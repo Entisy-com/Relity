@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 import { Permission } from "@prisma/client";
 import axios from "axios";
 import { useSession } from "next-auth/react";
-import { FC, useRef, useState } from "react";
+import type { FC } from "react";
+import { useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
-import { Server, TextChannel, User, VoiceChannel } from "../types";
+import type { Server, TextChannel, User, VoiceChannel } from "../types";
 import { BASE_URL, CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
@@ -143,7 +147,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           onClick={() => {
             server.roles.forEach((role) => {
               if (role.permissions.includes(Permission.MANAGE_SERVER)) {
-                role.users.forEach((u) => {
+                role.members.forEach((u) => {
                   if (u.id === user.id) setServerOptionsModalOpen(true);
                 });
               }
@@ -175,7 +179,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           setServerUserInfoModalOpen={setServerUserInfoModalOpen}
           type="server"
           roles={server.roles}
-          users={server.users}
+          users={server.members}
         />
       </div>
       <Modal
