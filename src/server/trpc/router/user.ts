@@ -3,10 +3,11 @@ import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import type { User, Member } from "../../../types";
-import { OnlineStatus } from "@prisma/client";
+import type { User, Member, Role } from "../../../types";
+import { OnlineStatus, Permission } from "@prisma/client";
 
 const ee = new EventEmitter();
+
 export const userRouter = router({
   joinServer: protectedProcedure
     .input(z.object({ userId: z.string(), serverId: z.string() }))
@@ -31,14 +32,6 @@ export const userRouter = router({
               id: input.userId,
             },
           },
-        },
-      });
-
-      const update = await ctx.prisma.member.update({
-        where: {
-          id: member.id,
-        },
-        data: {
           roles: {
             connect: {
               id: everyoneRole.id,
@@ -47,8 +40,8 @@ export const userRouter = router({
         },
       });
 
-      ee.emit("joinServer", update);
-      return update;
+      ee.emit("joinServer", member);
+      return member;
     }),
   onJoinServer: protectedProcedure.subscription(() => {
     return observable<User>((emit) => {
@@ -95,24 +88,49 @@ export const userRouter = router({
     .input(
       z.object({
         id: z.string(),
-        name: z.string().optional(),
-        image: z.string().optional(),
+        roles: z.array(z.string()).optional(),
+        nickname: z.string().optional(),
         banner: z.string().optional(),
+        pfp: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const update = await ctx.prisma.member.update({
-        where: {
-          id: input.id,
-        },
+      const memberRoles = await ctx.prisma.member.findUnique({
+        where: { id: input.id },
+        select: { roles: true },
+      });
+      (memberRoles?.roles ?? []).forEach(async (role) => {
+        await ctx.prisma.role.update({
+          where: { id: role.id },
+          data: { members: { disconnect: { id: input.id } } },
+        });
+      });
+      (input.roles ?? []).forEach(async (roleId) => {
+        await ctx.prisma.role.update({
+          where: { id: roleId },
+          data: { members: { connect: { id: input.id } } },
+        });
+      });
+
+      const member = await ctx.prisma.member.update({
+        where: { id: input.id },
         data: {
-          pfp: input.image,
-          nickname: input.name,
+          nickname: input.nickname,
           banner: input.banner,
+          pfp: input.pfp,
+        },
+        include: {
+          roles: true,
+          mentionedIn: true,
+          messages: true,
+          user: true,
+          ownerOf: true,
+          server: true,
+          voiceChannel: true,
         },
       });
-      ee.emit("updateMember", update);
-      return update;
+      ee.emit("updateMember", member);
+      return member;
     }),
   onUpdateMember: protectedProcedure.subscription(() => {
     return observable<Member>((emit) => {
@@ -174,6 +192,7 @@ export const userRouter = router({
           friendsWith: true,
           settings: true,
           member: true,
+
           // add status after migrate
         },
       });

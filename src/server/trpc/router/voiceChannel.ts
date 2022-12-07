@@ -173,7 +173,11 @@ export const voiceChannelRouter = router({
         include: {
           category: true,
           server: true,
-          members: true,
+          members: {
+            include: {
+              user: true,
+            },
+          },
         },
         cursor: cursor
           ? {

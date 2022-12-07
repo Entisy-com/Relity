@@ -1,50 +1,61 @@
 import { FC } from "react";
 import styles from "../styles/components/userList.module.scss";
 import { Role, User } from "@prisma/client";
+import { Member } from "../types";
 
 type Props = {
   ownerId: string;
-  setSelectedUser: Function;
-  serverUserInfoModalOpen: boolean;
-  setServerUserInfoModalOpen: Function;
+  setSelectedMember: Function;
+  memberInfoModalOpen: boolean;
+  setMemberInfoModalOpen: Function;
   type?: string;
-  users?: User[];
+  members?: Member[];
   roles?: Role[];
 };
 
 const UserList: FC<Props> = ({
   ownerId,
   type,
-  users,
+  members,
   roles,
-  serverUserInfoModalOpen,
-  setServerUserInfoModalOpen,
-  setSelectedUser,
+  memberInfoModalOpen,
+  setMemberInfoModalOpen,
+  setSelectedMember,
 }) => {
   return (
     <>
       <div className={styles.wrapper}>
-        {(users ?? [])
-          .sort((a: any, b: any) => a.name.localeCompare(b.name))
-          .map((user) => {
+        {(members ?? [])
+          .sort((a: Member, b: Member) =>
+            (a.nickname ?? a.user.name).localeCompare(b.nickname ?? b.user.name)
+          )
+          .map((member) => {
             return (
               <div
                 className={styles.user}
                 onClick={() => {
-                  setSelectedUser(user);
-                  setServerUserInfoModalOpen(true);
+                  setSelectedMember(member);
+                  setMemberInfoModalOpen(true);
                 }}
-                key={user.id}
+                key={member.id}
               >
                 <img
                   className={styles.image}
-                  src={user.image ?? ""}
+                  src={
+                    member.pfp
+                      ? member.pfp
+                      : member.user.image
+                      ? member.user.image
+                      : ""
+                  }
                   alt=""
                   width={30}
                   height={30}
                 />
-                <p className={styles.name}>{user.name}</p>
-                {ownerId === user.id && (
+                <p className={styles.name}>
+                  {member.nickname ?? member.user.name}
+                </p>
+                {ownerId === member.id && (
                   <img
                     className={styles.owner}
                     src="/crown.svg"

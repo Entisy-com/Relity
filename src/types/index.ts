@@ -104,7 +104,11 @@ export type TextChannel = Prisma.TextChannelGetPayload<{
 export type VoiceChannel = Prisma.VoiceChannelGetPayload<{
   include: {
     category: true;
-    members: true;
+    members: {
+      include: {
+        user: true;
+      };
+    };
     server: true;
   };
 }>;

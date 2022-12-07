@@ -25,7 +25,18 @@ export const isServerAThing = async (
   const server = await prisma?.server.findUnique({
     where: { id: serverId },
     include: {
-      members: true,
+      members: {
+        include: {
+          actionType: true,
+          mentionedIn: true,
+          messages: true,
+          ownerOf: true,
+          roles: true,
+          server: true,
+          user: true,
+          voiceChannel: true,
+        },
+      },
       owner: true,
       bannedUser: true,
       categories: true,

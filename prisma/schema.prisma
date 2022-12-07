@@ -2,13 +2,20 @@ generator client {
     provider = "prisma-client-js"
 }
 
+generator zod {
+    provider          = "prisma-zod-generator"
+    output            = "./zod"
+    isGenerateSelect  = false
+    isGenerateInclude = false
+}
+
 datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
 }
 
 model AdminUser {
-    id        String   @id @default(cuid())
+    id        String   @id @default(uuid())
     userid    String   @unique
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -16,7 +23,7 @@ model AdminUser {
 }
 
 model TextChannel {
-    id          String       @id @default(cuid())
+    id          String       @id @default(uuid())
     name        String
     serverid    String
     createdAt   DateTime     @default(now())
@@ -30,7 +37,7 @@ model TextChannel {
 }
 
 model VoiceChannel {
-    id          String       @id @default(cuid())
+    id          String       @id @default(uuid())
     name        String
     serverid    String
     createdAt   DateTime     @default(now())
@@ -44,7 +51,7 @@ model VoiceChannel {
 }
 
 model Category {
-    id            String         @id @default(cuid())
+    id            String         @id @default(uuid())
     name          String
     serverid      String
     permissions   Permission[]
@@ -55,7 +62,7 @@ model Category {
 }
 
 model Message {
-    id               String      @id @default(cuid())
+    id               String      @id @default(uuid())
     content          String
     authorId         String
     color            String?     @default("#fff")
@@ -70,7 +77,7 @@ model Message {
 }
 
 model Role {
-    id          String       @id @default(cuid())
+    id          String       @id @default(uuid())
     name        String
     permissions Permission[]
     serverid    String
@@ -85,7 +92,7 @@ model Role {
 }
 
 model Server {
-    id           String         @id @default(cuid())
+    id           String         @id @default(uuid())
     name         String
     ownerid      String         @unique
     pfp          String         @default("")
@@ -103,7 +110,7 @@ model Server {
 }
 
 model Account {
-    id                String   @id @default(cuid())
+    id                String   @id @default(uuid())
     userId            String
     type              String
     provider          String
@@ -123,7 +130,7 @@ model Account {
 }
 
 model Session {
-    id           String   @id @default(cuid())
+    id           String   @id @default(uuid())
     sessionToken String   @unique
     userId       String
     expires      DateTime
@@ -131,12 +138,12 @@ model Session {
 }
 
 model Member {
-    id             String        @id @default(cuid())
+    id             String        @id @default(uuid())
     user           User          @relation(fields: [userId], references: [id])
     userId         String
-    pfp            String        @default("")
-    banner         String        @default("")
-    nickname       String        @default("")
+    pfp            String?
+    banner         String?
+    nickname       String?
     roles          Role[]
     ownerOf        Server?       @relation("ownerOf")
     server         Server?       @relation("members", fields: [serverId], references: [id], onDelete: Cascade)
@@ -149,11 +156,12 @@ model Member {
 }
 
 model User {
-    id            String        @id @default(cuid())
+    id            String        @id @default(uuid())
     name          String
     email         String        @unique
     emailVerified DateTime?
     image         String
+    banner        String?
     status        OnlineStatus  @default(OFFLINE)
     createdAt     DateTime      @default(now())
     updatedAt     DateTime      @updatedAt
@@ -168,14 +176,14 @@ model User {
 }
 
 model ActionLog {
-    id       String       @id @default(cuid())
+    id       String       @id @default(uuid())
     server   Server       @relation(fields: [serverId], references: [id])
     serverId String       @unique
     actions  ActionType[]
 }
 
 model ActionType {
-    id          String    @id @default(cuid())
+    id          String    @id @default(uuid())
     member      Member    @relation(fields: [memberId], references: [id])
     memberId    String
     action      Action
@@ -185,7 +193,7 @@ model ActionType {
 }
 
 model UserSettings {
-    id     String @id @default(cuid())
+    id     String @id @default(uuid())
     userid String @unique
     user   User   @relation(fields: [userid], references: [id])
 }

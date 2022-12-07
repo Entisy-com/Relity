@@ -36,6 +36,11 @@ const ChannelList: FC<Props> = ({
     user: [] as User[],
   });
 
+  const { data: member } = trpc.user.getMemberByUserId.useQuery({
+    serverId: serverid,
+    userId: user?.id!,
+  });
+
   const textChannelQuery = trpc.textChannel.getChannels.useInfiniteQuery(
     { serverid },
     { getPreviousPageParam: (d) => d.nextCursor }
@@ -126,8 +131,8 @@ const ChannelList: FC<Props> = ({
         map[chan.id] = chan;
       }
       for (const chan of incoming ?? []) {
-        for (const user of chan.users ?? []) {
-          if (user.voicechannelid === chan.id) map[chan.id] = chan;
+        for (const m of chan.members ?? []) {
+          if (m.voiceChannelId === chan.id) map[chan.id] = chan;
         }
       }
 
@@ -213,7 +218,7 @@ const ChannelList: FC<Props> = ({
   const { data: server } = trpc.server.getServerById.useQuery({
     id: serverid,
   });
-  const { data: allUser } = trpc.user.getUser.useQuery({
+  const { data: allUser } = trpc.user.getUserById.useQuery({
     userId: user?.id!,
   });
 
@@ -238,14 +243,14 @@ const ChannelList: FC<Props> = ({
                 setVoiceChannelSettingsModalOpen(true);
             }}
             onClick={() => {
-              if (allUser?.user?.voicechannelid) {
+              if (member?.voiceChannelId) {
                 leaveVoiceChannel.mutate({
-                  userId: user.id,
+                  memberId: member.id,
                   channelId: channel.id,
                 });
               } else {
                 joinVoiceChannel.mutate({
-                  userId: user.id,
+                  memberId: member?.id!,
                   channelId: channel.id,
                 });
               }
@@ -266,8 +271,10 @@ const ChannelList: FC<Props> = ({
               </p>
             </div>
             <div className={styles.vc_users}>
-              {channel.users?.map((user) => {
-                return <p key={user.id}>{user.name}</p>;
+              {channel.members?.map((member) => {
+                return (
+                  <p key={member.id}>{member.nickname ?? member.user.name}</p>
+                );
               })}
               {/* {vcUser.vc === channel.id &&
                 (vcUser.user ?? []).map((user) => (

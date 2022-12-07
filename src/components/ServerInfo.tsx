@@ -1,13 +1,10 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 import { Permission } from "@prisma/client";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import type { FC } from "react";
 import { useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
-import type { Server, TextChannel, User, VoiceChannel } from "../types";
+import type { Member, Server, TextChannel, User, VoiceChannel } from "../types";
 import { BASE_URL, CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
@@ -29,9 +26,29 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const user = session?.user;
   const utils = trpc.useContext();
 
+  function isOwner(server: Server) {
+    for (const member of server.members) {
+      if (member.userId === user?.id) {
+        if (server.ownerid === member.id) return true;
+      }
+    }
+    return false;
+  }
+
+  function hasPermission(server: Server, permission: Permission) {
+    for (const role of server.roles) {
+      if (role.permissions.includes(permission)) {
+        for (const member of role.members) {
+          if (member.userId === user?.id) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   const [serverOptionsModalOpen, setServerOptionsModalOpen] = useState(false);
   const [serverMemberModalOpen, setServerMemberModalOpen] = useState(false);
-  const [serverUserInfoModalOpen, setServerUserInfoModalOpen] = useState(false);
+  const [memberInfoModalOpen, setMemberInfoModalOpen] = useState(false);
   const [textChannelSettingsModalOpen, setTextChannelSettingsModalOpen] =
     useState(false);
   const [voiceChannelSettingsModalOpen, setVoiceChannelSettingsModalOpen] =
@@ -48,7 +65,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const [selectedTextChannel, setSelectedTextChannel] = useState<TextChannel>();
   const [selectedVoiceChannel, setSelectedVoiceChannel] =
     useState<VoiceChannel>();
-  const [selectedUser, setSelectedUser] = useState<User>();
+  const [selectedMember, setSelectedMember] = useState<Member>();
 
   const createTextChannel = trpc.textChannel.createChannel.useMutation();
   const createVoiceChannel = trpc.voiceChannel.createChannel.useMutation();
@@ -145,19 +162,21 @@ const ServerInfo: FC<Props> = ({ server }) => {
       <div className={styles.wrapper}>
         <p
           onClick={() => {
-            server.roles.forEach((role) => {
-              if (role.permissions.includes(Permission.MANAGE_SERVER)) {
-                role.members.forEach((u) => {
-                  if (u.id === user.id) setServerOptionsModalOpen(true);
-                });
-              }
-            });
-            if (server.ownerid === user.id) setServerOptionsModalOpen(true);
+            if (
+              isOwner(server) ||
+              hasPermission(server, Permission.MANAGE_SERVER)
+            )
+              setServerOptionsModalOpen(true);
             else setServerMemberModalOpen(true);
           }}
           onContextMenu={(e) => {
             e.preventDefault();
-            if (server.ownerid === user.id) setServerInfoModalOpen(true);
+            if (
+              isOwner(server) ||
+              hasPermission(server, Permission.MANAGE_SERVER)
+            )
+              setServerInfoModalOpen(true);
+            else setServerMemberModalOpen(true);
           }}
           className={styles.server_name}
         >
@@ -174,12 +193,12 @@ const ServerInfo: FC<Props> = ({ server }) => {
         />
         <UserList
           ownerId={server.ownerid}
-          setSelectedUser={setSelectedUser}
-          serverUserInfoModalOpen={serverUserInfoModalOpen}
-          setServerUserInfoModalOpen={setServerUserInfoModalOpen}
+          setSelectedMember={setSelectedMember}
+          memberInfoModalOpen={memberInfoModalOpen}
+          setMemberInfoModalOpen={setMemberInfoModalOpen}
           type="server"
           roles={server.roles}
-          users={server.members}
+          members={server.members}
         />
       </div>
       <Modal
@@ -285,17 +304,27 @@ const ServerInfo: FC<Props> = ({ server }) => {
       <Modal
         blur
         closable
-        open={serverUserInfoModalOpen}
-        setOpen={setServerUserInfoModalOpen}
+        open={memberInfoModalOpen}
+        setOpen={setMemberInfoModalOpen}
       >
         <ModalTitle
-          value={selectedUser?.name ? `Name: ${selectedUser.name}` : ""}
+          value={
+            selectedMember?.nickname
+              ? `Name: ${selectedMember.nickname}`
+              : selectedMember?.user.name
+              ? `Name: ${selectedMember.user.name}`
+              : ""
+          }
         />
-        <ModalText value={`Id: ${selectedUser?.id}`} />
+        <ModalText value={`Id: ${selectedMember?.id}`} />
         <ModalText
-          value={selectedUser?.email ? `Email: ${selectedUser.email}` : ""}
+          value={
+            selectedMember?.user.email
+              ? `Email: ${selectedMember.user.email}`
+              : ""
+          }
         />
-        {selectedUser?.id === user.id ? (
+        {selectedMember?.id === user.id ? (
           <ModalButton
             value="Settings"
             onClick={() => (window.location.href = "/settings")}

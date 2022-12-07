@@ -1,0 +1,20 @@
+import { z } from 'zod';
+
+export const ActionSchema = z.enum([
+  'MESSAGE_DELETE',
+  'BAN_USER',
+  'KICK_USER',
+  'MESSAGE_EDIT',
+  'MESSAGE_SEND',
+  'CREATE_VOICE_CHANNEL',
+  'CREATE_TEXT_CHANNEL',
+  'DELETE_ROLE',
+  'CREATE_ROLE',
+  'UPDATE_ROLE',
+  'DELETE_VOICE_CHANNEL',
+  'DELETE_TEXT_CHANNEL',
+  'JOIN_VOICE_CHANNEL',
+  'LEAVE_VOICE_CHANNEL',
+  'JOIN_SERVER',
+  'LEAVE_SERVER',
+]);

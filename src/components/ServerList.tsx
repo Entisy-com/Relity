@@ -31,6 +31,15 @@ const ServerList: FC<Props> = ({ user }) => {
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useState<Server>();
 
+  function isOwner(server: Server) {
+    for (const member of server.members) {
+      if (member.userId === user.id) {
+        if (server.ownerid === member.id) return true;
+      }
+    }
+    return false;
+  }
+
   const serverQuery = trpc.server.getServers.useInfiniteQuery(
     { userid: user.id },
     { getPreviousPageParam: (d) => d.nextCursor }
@@ -192,14 +201,14 @@ const ServerList: FC<Props> = ({ user }) => {
               setSelectedServer(server);
             }}
             onContextMenu={(e) => {
-              if (server.ownerid === user.id) {
+              if (isOwner(server)) {
                 e.preventDefault();
                 setSelectedServer(server);
                 setServerInfoModalOpen(true);
               }
             }}
           >
-            {server.ownerid === user.id ? (
+            {isOwner(server) ? (
               <img
                 className={styles.crown}
                 src="/crown.svg"

@@ -25,7 +25,24 @@ export const serverRouter = router({
               },
             },
           },
-          textchannel: {},
+          textchannel: {
+            create: {
+              name: "General",
+            },
+          },
+          voicechannel: {
+            create: {
+              name: "General",
+            },
+          },
+          roles: {
+            create: {
+              name: "everyone",
+              visible: false,
+              color: "#ffffff",
+              permissions: ["READ_MESSAGES", "SEND_MESSAGES"],
+            },
+          },
         },
         include: {
           owner: true,

@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-empty-function */
-/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import type { GetServerSidePropsContext, NextPage } from "next";
 import { useCallback, useRef, useState } from "react";
 import styles from "../../styles/pages/settings.module.scss";
@@ -33,14 +28,15 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
   const { data: session } = useSession();
   const user = session?.user;
 
-  const [selectedUser, setSelectedUser] = useState<User>();
+  const [selectedMember, setSelectedMember] = useState<Member>();
   const [selectedRole, setSelectedRole] = useState<Role>();
   const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [createRoleModalOpen, setCreateRoleModalOpen] = useState(false);
   const [rolePermissions, setRolePermissions] = useState<Permission[]>([]);
+  const [memberRoles, setMemberRoles] = useState<Role[]>([]);
   const [roleVisibility, setRoleVisibility] = useState(true);
   const [roleColor, setRoleColor] = useState("#ffffff");
-  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
+  const [editMemberModalOpen, setEditMemberModalOpen] = useState(false);
   const [transferOwnershipModalOpen, setTransferOwnershipModalOpen] =
     useState(false);
 
@@ -55,6 +51,8 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
 
   const createRole = trpc.roles.createRole.useMutation();
   const updateServer = trpc.server.updateServer.useMutation();
+  const updateMember = trpc.user.updateMember.useMutation();
+  const updateRole = trpc.roles.updateRole.useMutation();
   const addActionToLog = trpc.server.addActionToActionLog.useMutation();
   const { data: actionLogServer } = trpc.server.getActionLogFromServer.useQuery(
     {
@@ -90,6 +88,11 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     });
   }, []);
 
+  const { data: member } = trpc.user.getMemberByUserId.useQuery({
+    userId: user?.id!,
+    serverId: server.id,
+  });
+
   function handleCreateRole() {
     setCreateRoleModalOpen(false);
     if (!roleNameRef.current) return;
@@ -103,10 +106,6 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     });
     roleNameRef.current.value = "";
     setRolePermissions([]);
-    const { data: member } = trpc.user.getMemberByUserId.useQuery({
-      userId: user?.id!,
-      serverId: server.id,
-    });
     addActionToLog.mutate({
       action: Action.CREATE_ROLE,
       serverid: server.id,
@@ -119,16 +118,29 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     setRolePermissions(selectedRole?.permissions!);
     setRoleVisibility(selectedRole?.visible!);
     setEditRoleModalOpen(false);
-    createRole.mutate({
-      name: roleNameRef?.current?.value ?? selectedRole?.name!,
+    updateRole.mutate({
+      roleid: selectedRole?.id!,
+      name:
+        roleNameRef?.current?.value !== ""
+          ? roleNameRef?.current?.value!
+          : selectedRole?.name!,
       permissions: rolePermissions,
       color: roleColor,
-      serverId: server.id,
       visible: roleVisibility,
     });
     if (roleNameRef.current && roleNameRef.current.value.trim().length > 0)
       roleNameRef.current.value = "";
-    discard();
+    discard(setEditRoleModalOpen);
+  }
+
+  function handleUpdateMember() {
+    setMemberRoles(selectedMember?.roles!);
+    setEditRoleModalOpen(false);
+    updateMember.mutate({
+      id: selectedMember?.id!,
+      roles: memberRoles as any[],
+    });
+    discard(setEditMemberModalOpen);
   }
 
   function handleTransferOwnership() {
@@ -143,25 +155,20 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     window.location.href = `/${server.id}`;
   }
 
-  function discard() {
+  function discard(callable: Function) {
     setRoleColor("#ffffff");
     setRolePermissions([]);
     setRoleVisibility(true);
     setSelectedRole(undefined);
-    setEditRoleModalOpen(false);
+    callable(false);
   }
 
   if (!server || !server.owner || !server.members) return <></>;
 
   const sortMembers = (a: Member, b: Member) => {
-    //Checkt ob a und b nen nicknamen haben und sortiert anhand diesem und hat auch die fälle für wenn einer oder keiner einen nickname hat
-    return a.nickname
-      ? b.nickname
-        ? a.nickname.localeCompare(b.nickname)
-        : a.nickname.localeCompare(b.user.name)
-      : b.nickname
-      ? a.user.name.localeCompare(b.nickname)
-      : a.user.name.localeCompare(b.user.name);
+    return (a.nickname ?? a.user?.name).localeCompare(
+      b.nickname ?? b.user?.name
+    );
   };
 
   const sortUsers = (a: User, b: User) => {
@@ -194,7 +201,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
             <h1 className={styles.option_title}>Info</h1>
             <div>
               <h3>Name: {server.name!}</h3>
-              <h3 title={server.owner.user.name}>
+              <h3 title={server?.owner?.user?.name ?? ""}>
                 Owner: {server.owner.nickname}
               </h3>
               <h3
@@ -261,11 +268,17 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           <div id="member" className={styles.option}>
             <h1 className={styles.option_title}>Member</h1>
             <div>
-              {server.members
-                .sort((a: any, b: any) => sortMembers(a, b))
-                .map((user) => (
-                  <p key={user.id}>{user.nickname ?? user.user.name}</p>
-                ))}
+              {server.members.sort(sortMembers).map((user) => (
+                <p
+                  onClick={() => {
+                    setSelectedMember(user);
+                    setEditMemberModalOpen(true);
+                  }}
+                  key={user.id}
+                >
+                  {user.nickname ?? user.user?.name}
+                </p>
+              ))}
             </div>
           </div>
           <div id="action_log" className={styles.option}>
@@ -440,7 +453,6 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           value="Visible"
           onChange={(visible) => setRoleVisibility(visible)}
         />
-
         <ModalButton
           type="complete"
           value="Save Changes!"
@@ -449,7 +461,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
         <ModalButton
           value="Discard Changes!"
           type="delete"
-          onClick={() => discard()}
+          onClick={() => discard(setEditRoleModalOpen)}
         />
       </Modal>
       <Modal
@@ -465,19 +477,22 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
               ? {
                   label:
                     server.members[0]?.nickname ??
-                    server.members[0]?.user.name!,
+                    server.members[0]?.user?.name!,
                   value: server.members[0]?.id!,
                 }
               : {
                   label:
                     server.members[1]?.nickname ??
-                    server.members[1]?.user.name!,
+                    server.members[1]?.user?.name!,
                   value: server.members[1]?.id!,
                 }
           }
           options={server.members.map((member) => {
             return member.id !== server.ownerid
-              ? { label: member.nickname ?? member.user.name, value: member.id }
+              ? {
+                  label: member.nickname ?? member.user?.name,
+                  value: member.id,
+                }
               : { label: null, value: null };
           })}
           onSelect={(option) => {
@@ -493,12 +508,37 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           }}
         />
       </Modal>
-      <Modal open={editUserModalOpen} setOpen={setEditRoleModalOpen} blur>
-        <ModalTitle value={selectedUser?.name!} />
+      <Modal open={editMemberModalOpen} setOpen={setEditMemberModalOpen} blur>
+        <ModalTitle
+          value={selectedMember?.nickname ?? selectedMember?.user.name ?? ""}
+        />
         <ModalDropdown
+          multiselect
+          onSelectMultiple={(options) => {
+            const memberRoles: Role[] = [];
+            options.forEach((option) => {
+              if (!memberRoles.includes(option.value))
+                memberRoles.push(option.value);
+            });
+            setMemberRoles(memberRoles);
+          }}
+          defaultValues={selectedMember?.roles.map((role) => ({
+            label: role.name,
+            value: role.id,
+          }))}
           options={server.roles.map((role) => {
             return { label: role.name, value: role.id };
           })}
+        />
+        <ModalButton
+          type="complete"
+          value="Save Changes!"
+          onClick={() => handleUpdateMember()}
+        />
+        <ModalButton
+          value="Discard Changes!"
+          type="delete"
+          onClick={() => discard(setEditMemberModalOpen)}
         />
       </Modal>
     </>
