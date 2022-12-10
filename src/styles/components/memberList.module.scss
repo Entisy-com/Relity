@@ -9,6 +9,11 @@
   border-left: 1px solid white;
 }
 
+.role_name {
+  text-align: center;
+  font-size: 14px;
+}
+
 .user {
   display: flex;
   height: 30px;
@@ -24,6 +29,14 @@
     translate: 0 -50%;
     filter: invert(55%) sepia(99%) saturate(749%) hue-rotate(16deg)
       brightness(98%) contrast(104%);
+  }
+  & > .admin {
+    position: relative;
+    right: 5px;
+    top: 50%;
+    translate: 0 -50%;
+    filter: invert(83%) sepia(1%) saturate(2%) hue-rotate(316deg)
+      brightness(97%) contrast(83%);
   }
 }
 

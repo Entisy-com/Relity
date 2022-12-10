@@ -9,6 +9,8 @@ import { MemberUpdateManyWithoutServerNestedInputObjectSchema } from './MemberUp
 import { UserUpdateManyWithoutBannedonNestedInputObjectSchema } from './UserUpdateManyWithoutBannedonNestedInput.schema';
 import { ActionLogUpdateOneWithoutServerNestedInputObjectSchema } from './ActionLogUpdateOneWithoutServerNestedInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { ServerUserPositionUpdateManyWithoutServerNestedInputObjectSchema } from './ServerUserPositionUpdateManyWithoutServerNestedInput.schema';
+import { ServerSettingsUpdateOneWithoutServerNestedInputObjectSchema } from './ServerSettingsUpdateOneWithoutServerNestedInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -73,6 +75,14 @@ const Schema: z.ZodType<Prisma.ServerUpdateInput> = z
         z.date(),
         z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema),
       ])
+      .optional(),
+    serverUserPosition: z
+      .lazy(
+        () => ServerUserPositionUpdateManyWithoutServerNestedInputObjectSchema,
+      )
+      .optional(),
+    settings: z
+      .lazy(() => ServerSettingsUpdateOneWithoutServerNestedInputObjectSchema)
       .optional(),
   })
   .strict();

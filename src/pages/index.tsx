@@ -5,6 +5,7 @@ import styles from "../styles/pages/index.module.scss";
 import ServerList from "../components/ServerList";
 import Profile from "../components/Profile";
 import { User } from "../types";
+import FriendList from "../components/FriendList";
 
 type Props = {
   user: User;
@@ -12,6 +13,10 @@ type Props = {
 
 const Index: NextPage<Props> = ({ user }) => {
   const updateUser = trpc.user.updateUser.useMutation();
+
+  const { data: allUser } = trpc.user.getUserById.useQuery({
+    userId: user.id,
+  });
 
   if (user) {
     // setInterval(async () => {
@@ -36,6 +41,7 @@ const Index: NextPage<Props> = ({ user }) => {
 
   return (
     <div className={styles.wrapper}>
+      <FriendList user={user} />
       <Profile user={user} />
       <ServerList user={user} />
     </div>

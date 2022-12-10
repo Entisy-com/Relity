@@ -7,6 +7,9 @@ const Schema: z.ZodType<Prisma.UserSettingsCreateInput> = z
   .object({
     id: z.string().optional(),
     user: z.lazy(() => UserCreateNestedOneWithoutSettingsInputObjectSchema),
+    notifyUnban: z.boolean().optional(),
+    notifyBan: z.boolean().optional(),
+    notifyKick: z.boolean().optional(),
   })
   .strict();
 

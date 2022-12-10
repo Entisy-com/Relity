@@ -7,7 +7,6 @@ import ModalFileSelect from "./ModalFileSelect";
 import ModalImage from "./ModalImage";
 import ModalInput from "./ModalInput";
 import ModalList from "./ModalList";
-import ModalListItem from "./ModalListItem";
 import ModalText from "./ModalText";
 import ModalTitle from "./ModalTitle";
 
@@ -21,7 +20,6 @@ export {
   ModalImage,
   ModalInput,
   ModalList,
-  ModalListItem,
   ModalText,
   ModalTitle,
 };

@@ -8,6 +8,8 @@ import { MemberUncheckedUpdateManyWithoutServerNestedInputObjectSchema } from '.
 import { UserUncheckedUpdateManyWithoutBannedonNestedInputObjectSchema } from './UserUncheckedUpdateManyWithoutBannedonNestedInput.schema';
 import { ActionLogUncheckedUpdateOneWithoutServerNestedInputObjectSchema } from './ActionLogUncheckedUpdateOneWithoutServerNestedInput.schema';
 import { DateTimeFieldUpdateOperationsInputObjectSchema } from './DateTimeFieldUpdateOperationsInput.schema';
+import { ServerUserPositionUncheckedUpdateManyWithoutServerNestedInputObjectSchema } from './ServerUserPositionUncheckedUpdateManyWithoutServerNestedInput.schema';
+import { ServerSettingsUncheckedUpdateOneWithoutServerNestedInputObjectSchema } from './ServerSettingsUncheckedUpdateOneWithoutServerNestedInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -79,6 +81,18 @@ const Schema: z.ZodType<Prisma.ServerUncheckedUpdateWithoutOwnerInput> = z
         z.date(),
         z.lazy(() => DateTimeFieldUpdateOperationsInputObjectSchema),
       ])
+      .optional(),
+    serverUserPosition: z
+      .lazy(
+        () =>
+          ServerUserPositionUncheckedUpdateManyWithoutServerNestedInputObjectSchema,
+      )
+      .optional(),
+    settings: z
+      .lazy(
+        () =>
+          ServerSettingsUncheckedUpdateOneWithoutServerNestedInputObjectSchema,
+      )
       .optional(),
   })
   .strict();

@@ -17,7 +17,7 @@ export const userRouter = router({
       });
       if (!server) throw new TRPCError({ code: "NOT_FOUND" });
       const everyoneRole = await ctx.prisma.role.findFirst({
-        where: { serverid: input.serverId, name: "everyone" },
+        where: { serverid: input.serverId, name: "Member" },
       });
       if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
       const member = await ctx.prisma.member.create({
@@ -99,18 +99,18 @@ export const userRouter = router({
         where: { id: input.id },
         select: { roles: true },
       });
-      (memberRoles?.roles ?? []).forEach(async (role) => {
+      for (const role of memberRoles?.roles ?? []) {
         await ctx.prisma.role.update({
           where: { id: role.id },
           data: { members: { disconnect: { id: input.id } } },
         });
-      });
-      (input.roles ?? []).forEach(async (roleId) => {
+      }
+      for (const roleId of input.roles ?? []) {
         await ctx.prisma.role.update({
           where: { id: roleId },
           data: { members: { connect: { id: input.id } } },
         });
-      });
+      }
 
       const member = await ctx.prisma.member.update({
         where: { id: input.id },
@@ -186,14 +186,23 @@ export const userRouter = router({
       const user = await ctx.prisma.user.findUnique({
         where: { id: input.userId },
         include: {
-          adminuser: true,
-          bannedon: true,
-          friends: true,
-          friendsWith: true,
-          settings: true,
           member: true,
-
-          // add status after migrate
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: {
+            include: {
+              member: true,
+              serverUserPosition: true,
+              adminuser: true,
+              settings: true,
+              bannedon: true,
+              friends: true,
+              friendsWith: true,
+            },
+          },
+          friendsWith: true,
         },
       });
       return user;
@@ -238,4 +247,214 @@ export const userRouter = router({
       if (!member) throw new TRPCError({ code: "NOT_FOUND" });
       return member;
     }),
+  getUserByMemberId: protectedProcedure
+    .input(z.object({ memberId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const member = await ctx.prisma.user.findFirst({
+        where: {
+          member: {
+            some: {
+              id: input.memberId,
+            },
+          },
+        },
+        include: {
+          member: true,
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: true,
+          friendsWith: true,
+        },
+      });
+      if (!member) throw new TRPCError({ code: "NOT_FOUND" });
+      return member;
+    }),
+  getFriendsByUserId: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().nullish(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input.limit ?? 50;
+      const { cursor } = input;
+      const friends = await ctx.prisma.user.findMany({
+        where: {
+          friends: {
+            some: {
+              id: input.userId,
+            },
+          },
+        },
+        include: {
+          member: true,
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: {
+            include: {
+              member: true,
+              adminuser: true,
+              bannedon: true,
+              friends: true,
+              friendsWith: true,
+              settings: true,
+              serverUserPosition: true,
+            },
+          },
+          friendsWith: true,
+        },
+
+        take: limit + 1,
+        cursor: cursor
+          ? {
+              id: cursor,
+            }
+          : undefined,
+      });
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (friends.length > limit) {
+        const nextFriend = friends.pop()!;
+        nextCursor = nextFriend.id;
+      }
+      return { friends, nextCursor };
+    }),
+  addFriend: protectedProcedure
+    .input(z.object({ target: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      // update target
+      const target = await ctx.prisma.user.update({
+        where: {
+          id: input.target,
+        },
+        data: {
+          friends: {
+            connect: {
+              id: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          member: true,
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: {
+            include: {
+              member: true,
+              adminuser: true,
+              bannedon: true,
+              friends: true,
+              friendsWith: true,
+              settings: true,
+              serverUserPosition: true,
+            },
+          },
+          friendsWith: true,
+        },
+      });
+      // update self
+      const user = await ctx.prisma.user.update({
+        where: {
+          id: ctx.session.user.id,
+        },
+        data: {
+          friends: {
+            connect: {
+              id: input.target,
+            },
+          },
+        },
+        include: {
+          member: true,
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: {
+            include: {
+              member: true,
+              adminuser: true,
+              bannedon: true,
+              friends: true,
+              friendsWith: true,
+              settings: true,
+              serverUserPosition: true,
+            },
+          },
+          friendsWith: true,
+        },
+      });
+      ee.emit("addFriend", user, target);
+      return user.friends;
+    }),
+  onFriendAdd: protectedProcedure.subscription(() => {
+    return observable<User[]>((emit) => {
+      const onAdd = (data: User[]) => emit.next(data);
+      ee.on("addFriend", onAdd);
+      return () => {
+        ee.off("addFriend", onAdd);
+      };
+    });
+  }),
+  searchUser: protectedProcedure
+    .input(
+      z.object({
+        name: z.string(),
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().nullish(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input.limit ?? 50;
+      const { cursor } = input;
+      const users = await ctx.prisma.user.findMany({
+        where: {
+          name: {
+            contains: input.name,
+          },
+        },
+        include: {
+          adminuser: true,
+          bannedon: true,
+          friends: {
+            include: {
+              member: true,
+              adminuser: true,
+              bannedon: true,
+              friends: true,
+              friendsWith: true,
+              settings: true,
+              serverUserPosition: true,
+            },
+          },
+          friendsWith: true,
+          member: true,
+          serverUserPosition: true,
+          settings: true,
+        },
+      });
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (users.length > limit) {
+        const nextFriend = users.pop()!;
+        nextCursor = nextFriend.id;
+      }
+      ee.emit("searchUpdate", users);
+      return { users, nextCursor };
+    }),
+  onUserSearchUpdate: protectedProcedure.subscription(() => {
+    return observable<User[]>((emit) => {
+      const onSearchUpdate = (data: User[]) => emit.next(data);
+      ee.on("searchUpdate", onSearchUpdate);
+      return () => {
+        ee.off("searchUpdate", onSearchUpdate);
+      };
+    });
+  }),
 });

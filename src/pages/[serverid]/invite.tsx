@@ -9,8 +9,9 @@ import ModalButton from "../../components/modal/ModalButton";
 import ModalText from "../../components/modal/ModalText";
 import ModalTitle from "../../components/modal/ModalTitle";
 import { trpc } from "../../utils/trpc";
-import { isServerAThing } from "../api/v1/getServer";
+import { isServerAThing, isServerMember } from "../api/v1/getServer";
 import styles from "../../styles/pages/invite.module.scss";
+import { getServerAuthSession } from "../../server/common/get-server-auth-session";
 
 type Props = {
   server: Server;
@@ -28,23 +29,41 @@ const Invite: NextPage<Props> = ({ server }) => {
     window.location.href = `/${serverId}`;
   }
 
-  console.log({ server });
-
   const { data: allData } = trpc.server.getServerById.useQuery({
     id: server.id,
   });
 
-  console.log({ allData });
+  const { data: allUser } = trpc.user.getUserById.useQuery({
+    userId: user?.id ?? "",
+  });
 
-  if (!allData) return <></>;
+  if (!allData || !allUser) return <></>;
+
+  function isUserBanned() {
+    for (const u of allData?.bannedUser ?? []) {
+      if (u.id === user?.id!) return true;
+    }
+    return false;
+  }
 
   return (
     <div className={styles.wrapper}>
-      <Modal open={true} setOpen={() => {}} blur>
-        <ModalTitle value={allData.name} />
-        <ModalText value={`${allData.members.length} Members`} />
-        <ModalButton onClick={() => joinServer()} value="Join Server!" />
-      </Modal>
+      {isUserBanned() ? (
+        <Modal open={true} setOpen={() => {}} blur>
+          <ModalTitle value={allData.name} />
+          <ModalText value="You are Banned from this Server" />
+          <ModalButton
+            onClick={() => (window.location.href = document.referrer)}
+            value="Bring me Back!"
+          />
+        </Modal>
+      ) : (
+        <Modal open={true} setOpen={() => {}} blur>
+          <ModalTitle value={allData.name} />
+          <ModalText value={`${allData.members.length} Members`} />
+          <ModalButton onClick={() => joinServer()} value="Join Server!" />
+        </Modal>
+      )}
     </div>
   );
 };
@@ -53,8 +72,11 @@ export default Invite;
 
 export async function getServerSideProps(ctx: GetServerSidePropsContext) {
   const server = await isServerAThing(ctx.req, ctx.res);
-  console.log({ server });
+  // const session = await getServerAuthSession(ctx);
 
+  // return (
+  //   !session?.user && { redirect: { destination: "/", persistent: false } }
+  // );
   return server
     ? {
         props: {

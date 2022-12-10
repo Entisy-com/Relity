@@ -1,0 +1,15 @@
+.roles,
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid black;
+}
+
+.role,
+.member {
+  width: 200px;
+  padding: 5px;
+  border: 1px solid black;
+}

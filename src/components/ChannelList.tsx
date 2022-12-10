@@ -3,8 +3,9 @@ import { trpc } from "../utils/trpc";
 import styles from "../styles/components/channelList.module.scss";
 import { BASE_URL } from "../utils/constants";
 import { useSession } from "next-auth/react";
-import { TextChannel, VoiceChannel } from "../types";
-import { User } from "@prisma/client";
+import { Server, TextChannel, VoiceChannel } from "../types";
+import { Permission, User } from "@prisma/client";
+import { hasPermission, isOwner } from "../utils/handler";
 
 type Props = {
   setSelectedTextChannel: Function;
@@ -13,10 +14,10 @@ type Props = {
   setTextChannelSettingsModalOpen: Function;
   voiceChannelSettingsModalOpen: boolean;
   setVoiceChannelSettingsModalOpen: Function;
-  serverid: string;
+  server: Server;
 };
 const ChannelList: FC<Props> = ({
-  serverid,
+  server,
   textChannelSettingsModalOpen,
   setTextChannelSettingsModalOpen,
   voiceChannelSettingsModalOpen,
@@ -37,16 +38,16 @@ const ChannelList: FC<Props> = ({
   });
 
   const { data: member } = trpc.user.getMemberByUserId.useQuery({
-    serverId: serverid,
+    serverId: server.id,
     userId: user?.id!,
   });
 
   const textChannelQuery = trpc.textChannel.getChannels.useInfiniteQuery(
-    { serverid },
+    { serverid: server.id },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
   const voiceChannelQuery = trpc.voiceChannel.getChannels.useInfiniteQuery(
-    { serverid },
+    { serverid: server.id },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
 
@@ -215,9 +216,6 @@ const ChannelList: FC<Props> = ({
     },
   });
 
-  const { data: server } = trpc.server.getServerById.useQuery({
-    id: serverid,
-  });
   const { data: allUser } = trpc.user.getUserById.useQuery({
     userId: user?.id!,
   });
@@ -236,7 +234,14 @@ const ChannelList: FC<Props> = ({
               ) && styles.active
             }`}
             onContextMenu={(e) => {
-              if (server?.ownerid !== user.id) return;
+              if (
+                !hasPermission(
+                  user.id,
+                  server,
+                  Permission.MANAGE_SERVER || isOwner(user.id, server)
+                )
+              )
+                return;
               e.preventDefault();
               setSelectedVoiceChannel(channel);
               if (!voiceChannelSettingsModalOpen)
@@ -292,14 +297,19 @@ const ChannelList: FC<Props> = ({
               ) && styles.active
             }`}
             onContextMenu={(e) => {
-              if (server?.ownerid !== user.id) return;
+              if (
+                !(
+                  hasPermission(user.id, server, Permission.MANAGE_SERVER) ||
+                  isOwner(user.id, server)
+                )
+              )
+                return;
               e.preventDefault();
               setSelectedTextChannel(channel);
-              if (!textChannelSettingsModalOpen)
-                setTextChannelSettingsModalOpen(true);
+              setTextChannelSettingsModalOpen(true);
             }}
             onClick={() =>
-              (window.location.href = `${BASE_URL}/${serverid}/${channel.id}`)
+              (window.location.href = `${BASE_URL}/${server.id}/${channel.id}`)
             }
           >
             <div

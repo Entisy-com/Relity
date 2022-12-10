@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 import type { FC } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
@@ -20,6 +16,8 @@ import {
   ModalTitle,
 } from "./modal";
 import type { Server } from "../types";
+import { Droppable } from "react-beautiful-dnd";
+import ServerComp from "./Server";
 
 type Props = {
   user: User;
@@ -31,21 +29,13 @@ const ServerList: FC<Props> = ({ user }) => {
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useState<Server>();
 
-  function isOwner(server: Server) {
-    for (const member of server.members) {
-      if (member.userId === user.id) {
-        if (server.ownerid === member.id) return true;
-      }
-    }
-    return false;
-  }
-
   const serverQuery = trpc.server.getServers.useInfiniteQuery(
     { userid: user.id },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
 
   const utils = trpc.useContext();
+  const [isLoaded, setIsLoaded] = useState(false);
   const [serverName, setServerName] = useState("");
   const [serverImage, setServerImage] = useState("");
 
@@ -75,10 +65,11 @@ const ServerList: FC<Props> = ({ user }) => {
           if (m.userId === user.id) map[serv.id] = serv;
       }
 
-      return Object.values(map).sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      return Object.values(map);
+      // return Object.values(map).sort(
+      //   (a, b) =>
+      //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      // );
     });
   }, []);
   const removeServer = useCallback((incoming: Server) => {
@@ -99,6 +90,10 @@ const ServerList: FC<Props> = ({ user }) => {
     const servers = serverQuery.data?.pages.map((page) => page.servers).flat();
     addServer(servers);
   }, [serverQuery.data?.pages, addServer]);
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   trpc.server.onServerCreate.useSubscription(undefined, {
     onData(server) {
@@ -160,7 +155,7 @@ const ServerList: FC<Props> = ({ user }) => {
     });
     deleteServer.mutate({ id: selectedServer?.id! });
 
-    window.location.href = "/";
+    if (window.location.pathname !== "/") window.location.href = "/";
   }
 
   async function handleChangeImage(file: File) {
@@ -191,103 +186,32 @@ const ServerList: FC<Props> = ({ user }) => {
   return (
     <>
       <div className={styles.wrapper}>
-        {(server ?? []).map((server) => (
-          <div
-            key={server.id}
-            className={styles.server}
-            onClick={(e) => {
-              window.location.href = `/${server.id}`;
-              e.preventDefault();
-              setSelectedServer(server);
-            }}
-            onContextMenu={(e) => {
-              if (isOwner(server)) {
-                e.preventDefault();
-                setSelectedServer(server);
-                setServerInfoModalOpen(true);
-              }
-            }}
+        {isLoaded ? (
+          <Droppable
+            droppableId="servers"
+            type="SERVER"
+            mode="standard"
+            direction="horizontal"
           >
-            {isOwner(server) ? (
-              <img
-                className={styles.crown}
-                src="/crown.svg"
-                alt=""
-                width={30}
-                height={30}
-              />
-            ) : (
-              <></>
+            {(provided, snapshot) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}>
+                {(server ?? []).map((server, index) => (
+                  <ServerComp
+                    key={server.id}
+                    server={server}
+                    index={index}
+                    user={user}
+                    setSelectedServer={setSelectedServer}
+                    setServerInfoModalOpen={setServerInfoModalOpen}
+                    serverImage={serverImage}
+                    serverName={serverName}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
             )}
-            <div className={styles.logo}>
-              {serverImage !== "" ? (
-                <>
-                  {serverImage.endsWith(".gif") ? (
-                    <>
-                      <img
-                        className={styles.a_pfp}
-                        src={serverImage}
-                        alt=""
-                        width={40}
-                        height={40}
-                      />
-                      <img
-                        className={styles.pfp}
-                        src={serverImage.replace(".gif", ".png")}
-                        alt=""
-                        width={40}
-                        height={40}
-                      />
-                    </>
-                  ) : (
-                    <img
-                      className={styles.pfp}
-                      src={serverImage}
-                      alt=""
-                      width={40}
-                      height={40}
-                    />
-                  )}
-                </>
-              ) : server.pfp ? (
-                <>
-                  {server.pfp.endsWith(".gif") ? (
-                    <>
-                      <img
-                        className={styles.a_pfp}
-                        src={server.pfp}
-                        alt=""
-                        width={40}
-                        height={40}
-                      />
-                      <img
-                        className={styles.pfp}
-                        src={server.pfp.replace(".gif", ".png")}
-                        alt=""
-                        width={40}
-                        height={40}
-                      />
-                    </>
-                  ) : (
-                    <img
-                      className={styles.pfp}
-                      src={server.pfp}
-                      alt=""
-                      width={40}
-                      height={40}
-                    />
-                  )}
-                </>
-              ) : (
-                <p>
-                  {serverName !== ""
-                    ? serverName.substring(0, 2)
-                    : server.name.substring(0, 2)}
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
+          </Droppable>
+        ) : null}
         <div
           className={styles.add_server}
           onClick={() => setCreateServerModalOpen(true)}

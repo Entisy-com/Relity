@@ -1,8 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
-import type { Server, TextChannel } from "@prisma/client";
+import type { Server, TextChannel } from "../../types";
 import type { GetServerSidePropsContext, NextPage } from "next";
 import { useSession } from "next-auth/react";
 import ServerInfo from "../../components/ServerInfo";
@@ -10,7 +6,7 @@ import ServerList from "../../components/ServerList";
 import Profile from "../../components/Profile";
 import { trpc } from "../../utils/trpc";
 import { isChannelAThing } from "../api/v1/getChannel";
-import { isServerAThing } from "../api/v1/getServer";
+import { isServerAThing, isServerMember } from "../api/v1/getServer";
 import { useCallback, useRef, useEffect, useState } from "react";
 import Modal from "../../components/modal/Modal";
 import ModalTitle from "../../components/modal/ModalTitle";
@@ -18,6 +14,7 @@ import ModalText from "../../components/modal/ModalText";
 import ModalButton from "../../components/modal/ModalButton";
 import styles from "../../styles/pages/[channelid].module.scss";
 import type { Message } from "../../types";
+import { getServerAuthSession } from "../../server/common/get-server-auth-session";
 
 type Props = {
   server: Server;
@@ -33,10 +30,6 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
 
   const { data: allUser } = trpc.user.getUserById.useQuery({
     userId: user?.id!,
-  });
-
-  const { data: allData } = trpc.server.getServerById.useQuery({
-    id: server.id,
   });
 
   const messageRef = useRef<HTMLTextAreaElement>(null);
@@ -96,6 +89,11 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     },
   });
 
+  const { data: member } = trpc.user.getMemberByUserId.useQuery({
+    userId: user?.id!,
+    serverId: server.id,
+  });
+
   function handleSendMessage(e: any) {
     e.preventDefault();
     if (!messageRef.current) return;
@@ -103,7 +101,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     createMessage.mutate({
       content: messageRef.current.value,
       channelId: channel.id,
-      authorId: user?.id!,
+      authorId: member?.id!,
     });
     messageRef.current.value = "";
     setTimeout(() => {
@@ -154,6 +152,10 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
     return { normalizedX, normalizedY };
   };
 
+  const { data: allData } = trpc.server.getServerById.useQuery({
+    id: server.id,
+  });
+
   if (!allData) return <></>;
   if (!user) return <></>;
 
@@ -188,7 +190,7 @@ const ChannelPage: NextPage<Props> = ({ server, channel }) => {
                     />
                     <div className={styles.content}>
                       <p className={styles.name}>
-                        {msg.author?.nickname ?? msg.author.user}
+                        {msg.author?.nickname ?? msg.author.user.name}
                       </p>
                       <p className={styles.msg}>{msg.content}</p>
                     </div>
@@ -304,6 +306,24 @@ export default ChannelPage;
 export async function getServerSideProps(ctx: GetServerSidePropsContext) {
   const server = await isServerAThing(ctx.req, ctx.res);
   const channel = await isChannelAThing(ctx.req, ctx.res);
+  const session = await getServerAuthSession(ctx);
+
+  function isUserBanned() {
+    for (const u of server?.bannedUser ?? []) {
+      if (u.id === session?.user?.id ?? "") return true;
+    }
+    return false;
+  }
+
+  const member = await isServerMember(
+    ctx.req,
+    ctx.res,
+    session?.user?.id ?? ""
+  );
+  if (!member || isUserBanned())
+    return {
+      redirect: { destination: `/${server?.id}/invite`, persistent: false },
+    };
 
   if (!server) return { redirect: { destination: "/", persistent: false } };
   if (!channel)

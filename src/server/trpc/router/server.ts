@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import type { ActionType, Server } from "../../../types";
+import type { ActionType, Member, Server, User } from "../../../types";
 import { TRPCError } from "@trpc/server";
 import { Action } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
@@ -37,15 +37,61 @@ export const serverRouter = router({
           },
           roles: {
             create: {
-              name: "everyone",
-              visible: false,
+              name: "Member",
+              visible: true,
               color: "#ffffff",
               permissions: ["READ_MESSAGES", "SEND_MESSAGES"],
             },
           },
+          serverUserPosition: {
+            create: {
+              user: {
+                connect: {
+                  id: ctx.session.user.id,
+                },
+              },
+            },
+          },
+          settings: {
+            create: {
+              logChannelUpdates: true,
+              logJoinLeave: false,
+              logMemberUpdates: true,
+              logMessages: false,
+              logMessageUpdates: true,
+              logRoleUpdates: true,
+              notifyBan: true,
+              notifyKick: true,
+              notifyUnban: true,
+              showBadges: true,
+            },
+          },
         },
         include: {
-          owner: true,
+          owner: {
+            include: {
+              user: true,
+            },
+          },
+          roles: true,
+        },
+      });
+      const memberRole = await ctx.prisma.role.findFirst({
+        where: {
+          serverid: server.id,
+          name: "Member",
+        },
+      });
+      await ctx.prisma.member.update({
+        where: {
+          id: server.owner.id,
+        },
+        data: {
+          roles: {
+            connect: {
+              id: memberRole!.id,
+            },
+          },
         },
       });
       const update = await ctx.prisma.server.update({
@@ -96,7 +142,11 @@ export const serverRouter = router({
           },
           roles: {
             include: {
-              members: true,
+              members: {
+                include: {
+                  user: true,
+                },
+              },
               mentionedIn: true,
               server: true,
             },
@@ -126,6 +176,12 @@ export const serverRouter = router({
               voiceChannel: true,
             },
           },
+          settings: {
+            include: {
+              server: true,
+            },
+          },
+          serverUserPosition: true,
         },
       });
       ee.emit("addServer", update);
@@ -162,6 +218,11 @@ export const serverRouter = router({
           id: input.id,
         },
         include: {
+          settings: {
+            include: {
+              server: true,
+            },
+          },
           textchannel: {
             include: {
               category: true,
@@ -200,7 +261,11 @@ export const serverRouter = router({
           },
           roles: {
             include: {
-              members: true,
+              members: {
+                include: {
+                  user: true,
+                },
+              },
               mentionedIn: true,
               server: true,
             },
@@ -230,6 +295,7 @@ export const serverRouter = router({
               voiceChannel: true,
             },
           },
+          serverUserPosition: true,
         },
       });
       if (!server) throw new TRPCError({ code: "NOT_FOUND" });
@@ -260,6 +326,21 @@ export const serverRouter = router({
       });
       // Deletes all Roles
       await ctx.prisma.role.deleteMany({
+        where: {
+          serverid: server.id,
+        },
+      });
+      const serverUserPosition = await ctx.prisma.serverUserPosition.findFirst({
+        where: {
+          serverId: server.id,
+        },
+      });
+      await ctx.prisma.serverUserPosition.delete({
+        where: {
+          id: serverUserPosition?.id,
+        },
+      });
+      await ctx.prisma.serverSettings.delete({
         where: {
           serverid: server.id,
         },
@@ -307,6 +388,11 @@ export const serverRouter = router({
           id: input.id,
         },
         include: {
+          settings: {
+            include: {
+              server: true,
+            },
+          },
           textchannel: {
             include: {
               category: true,
@@ -345,7 +431,11 @@ export const serverRouter = router({
           },
           roles: {
             include: {
-              members: true,
+              members: {
+                include: {
+                  user: true,
+                },
+              },
               mentionedIn: true,
               server: true,
             },
@@ -375,6 +465,8 @@ export const serverRouter = router({
               voiceChannel: true,
             },
           },
+
+          serverUserPosition: true,
         },
       });
       return server;
@@ -392,6 +484,11 @@ export const serverRouter = router({
       const { cursor } = input;
       const servers = await ctx.prisma.server.findMany({
         include: {
+          settings: {
+            include: {
+              server: true,
+            },
+          },
           textchannel: {
             include: {
               category: true,
@@ -430,7 +527,11 @@ export const serverRouter = router({
           },
           roles: {
             include: {
-              members: true,
+              members: {
+                include: {
+                  user: true,
+                },
+              },
               mentionedIn: true,
               server: true,
             },
@@ -460,6 +561,7 @@ export const serverRouter = router({
               voiceChannel: true,
             },
           },
+          serverUserPosition: true,
         },
         take: limit + 1,
         where: { members: { some: { userId: input.userid } } },
@@ -556,4 +658,112 @@ export const serverRouter = router({
       });
       return log;
     }),
+  switchServer: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        position: z.number(),
+        oldPosition: z.number(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const server = await ctx.prisma.server.findFirst({
+        where: {
+          serverUserPosition: {
+            some: {
+              userId: input.userId,
+              position: input.position,
+            },
+          },
+        },
+      });
+      if (!server) throw new TRPCError({ code: "NOT_FOUND" });
+      const serverUserPosition = await ctx.prisma.serverUserPosition.findFirst({
+        where: {
+          userId: input.userId,
+          serverId: server.id,
+        },
+      });
+      if (!serverUserPosition) throw new TRPCError({ code: "NOT_FOUND" });
+      const update = await ctx.prisma.server.update({
+        where: { id: server?.id },
+        data: {
+          serverUserPosition: {
+            update: {
+              where: {
+                id: serverUserPosition.id,
+              },
+              data: {
+                position: input.oldPosition,
+              },
+            },
+          },
+        },
+      });
+    }),
+  banUserFromServer: protectedProcedure
+    .input(
+      z.object({
+        memberId: z.string(),
+        userId: z.string(),
+        serverId: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      await ctx.prisma.server.update({
+        where: { id: input.serverId },
+        data: {
+          bannedUser: {
+            connect: {
+              id: input.userId,
+            },
+          },
+          members: {
+            disconnect: {
+              id: input.memberId,
+            },
+          },
+        },
+      });
+      const update = await ctx.prisma.user.findUnique({
+        where: { id: input.userId },
+      });
+      ee.emit("bannedUser", update);
+    }),
+  onBanUser: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onCreate = (data: User) => emit.next(data);
+      ee.on("bannedUser", onCreate);
+      return () => {
+        ee.off("bannedUser", onCreate);
+      };
+    });
+  }),
+  pardonUserFromServer: protectedProcedure
+    .input(z.object({ userId: z.string(), serverId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await ctx.prisma.server.update({
+        where: { id: input.serverId },
+        data: {
+          bannedUser: {
+            disconnect: {
+              id: input.userId,
+            },
+          },
+        },
+      });
+      const update = await ctx.prisma.user.findUnique({
+        where: { id: input.userId },
+      });
+      ee.emit("unbannedUser", update);
+    }),
+  onUnbanUser: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onCreate = (data: User) => emit.next(data);
+      ee.on("unbannedUser", onCreate);
+      return () => {
+        ee.off("unbannedUser", onCreate);
+      };
+    });
+  }),
 });

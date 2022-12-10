@@ -9,6 +9,9 @@ const Schema: z.ZodType<Prisma.UserSettingsOrderByWithRelationInput> = z
     id: z.lazy(() => SortOrderSchema).optional(),
     userid: z.lazy(() => SortOrderSchema).optional(),
     user: z.lazy(() => UserOrderByWithRelationInputObjectSchema).optional(),
+    notifyUnban: z.lazy(() => SortOrderSchema).optional(),
+    notifyBan: z.lazy(() => SortOrderSchema).optional(),
+    notifyKick: z.lazy(() => SortOrderSchema).optional(),
   })
   .strict();
 

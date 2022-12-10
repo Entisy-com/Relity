@@ -21,8 +21,6 @@ const Settings: NextPage<Props> = ({ user }) => {
   const [showChangePasswordModalOpen, setShowChangePasswordModalOpen] =
     useState(false);
 
-  //TODO: change example options into components
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.options}>

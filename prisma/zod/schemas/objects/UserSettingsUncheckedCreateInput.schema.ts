@@ -6,6 +6,9 @@ const Schema: z.ZodType<Prisma.UserSettingsUncheckedCreateInput> = z
   .object({
     id: z.string().optional(),
     userid: z.string(),
+    notifyUnban: z.boolean().optional(),
+    notifyBan: z.boolean().optional(),
+    notifyKick: z.boolean().optional(),
   })
   .strict();
 

@@ -2,7 +2,7 @@ import type { GetServerSidePropsContext, NextPage } from "next";
 import Profile from "../components/Profile";
 import ServerList from "../components/ServerList";
 import { trpc } from "../utils/trpc";
-import { isServerAThing } from "./api/v1/getServer";
+import { isServerAThing, isServerMember } from "./api/v1/getServer";
 import styles from "../styles/pages/[serverid].module.scss";
 import { getServerAuthSession } from "../server/common/get-server-auth-session";
 import ServerInfo from "../components/ServerInfo";
@@ -37,6 +37,25 @@ export default ServerPage;
 export async function getServerSideProps(ctx: GetServerSidePropsContext) {
   const server = await isServerAThing(ctx.req, ctx.res);
   const session = await getServerAuthSession(ctx);
+
+  function isUserBanned() {
+    for (const u of server?.bannedUser ?? []) {
+      if (u.id === session?.user?.id ?? "") return true;
+    }
+    return false;
+  }
+
+  const member = await isServerMember(
+    ctx.req,
+    ctx.res,
+    session?.user?.id ?? ""
+  );
+
+  if (!member || isUserBanned())
+    return {
+      redirect: { destination: `/${server?.id}/invite`, persistent: false },
+    };
+
   return server
     ? {
         props: {

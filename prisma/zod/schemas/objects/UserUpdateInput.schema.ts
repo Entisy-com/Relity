@@ -13,6 +13,7 @@ import { ServerUpdateManyWithoutBannedUserNestedInputObjectSchema } from './Serv
 import { UserUpdateManyWithoutFriendsWithNestedInputObjectSchema } from './UserUpdateManyWithoutFriendsWithNestedInput.schema';
 import { UserUpdateManyWithoutFriendsNestedInputObjectSchema } from './UserUpdateManyWithoutFriendsNestedInput.schema';
 import { MemberUpdateManyWithoutUserNestedInputObjectSchema } from './MemberUpdateManyWithoutUserNestedInput.schema';
+import { ServerUserPositionUpdateManyWithoutUserNestedInputObjectSchema } from './ServerUserPositionUpdateManyWithoutUserNestedInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -97,6 +98,11 @@ const Schema: z.ZodType<Prisma.UserUpdateInput> = z
       .optional(),
     member: z
       .lazy(() => MemberUpdateManyWithoutUserNestedInputObjectSchema)
+      .optional(),
+    serverUserPosition: z
+      .lazy(
+        () => ServerUserPositionUpdateManyWithoutUserNestedInputObjectSchema,
+      )
       .optional(),
   })
   .strict();

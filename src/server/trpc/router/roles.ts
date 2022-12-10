@@ -63,6 +63,7 @@ export const rolesRouter = router({
         name: z.string().optional(),
         color: z.string().optional(),
         permissions: z.array(z.nativeEnum(Permission)).optional(),
+        position: z.number().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -73,6 +74,7 @@ export const rolesRouter = router({
           visible: input.visible,
           name: input.name,
           permissions: input.permissions,
+          position: input.position,
         },
       });
       ee.emit("updateRole", update);
@@ -120,4 +122,188 @@ export const rolesRouter = router({
       };
     });
   }),
+  switchRole: protectedProcedure
+    .input(
+      z.object({
+        position: z.number(),
+        oldPosition: z.number(),
+        serverId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      console.table(input);
+      const updatedRoles = [] as Role[];
+      if (input.position < input.oldPosition) {
+        //Nach Oben
+        console.log("Nach Oben");
+        const role = await ctx.prisma.role.findFirst({
+          where: {
+            position: input.oldPosition,
+            serverid: input.serverId,
+          },
+        });
+        const update = await ctx.prisma.role.update({
+          where: { id: role?.id },
+          data: {
+            position: input.position,
+          },
+          include: {
+            members: {
+              include: {
+                roles: true,
+                user: true,
+              },
+            },
+            server: {
+              include: {
+                members: true,
+              },
+            },
+            mentionedIn: true,
+          },
+        });
+        updatedRoles.push(update);
+        for (let i = input.oldPosition; i > input.position; i--) {
+          const role = await ctx.prisma.role.findFirst({
+            where: {
+              position: i - 1,
+              serverid: input.serverId,
+            },
+          });
+          const update = await ctx.prisma.role.update({
+            where: { id: role?.id },
+            data: {
+              position: i,
+            },
+            include: {
+              members: {
+                include: {
+                  roles: true,
+                  user: true,
+                },
+              },
+              server: {
+                include: {
+                  members: true,
+                },
+              },
+              mentionedIn: true,
+            },
+          });
+          updatedRoles.push(update);
+        }
+      } else if (input.position > input.oldPosition) {
+        console.table(input);
+        //Nach Unten
+        console.log("Nach Unten");
+        const role = await ctx.prisma.role.findFirst({
+          where: {
+            position: input.oldPosition,
+            serverid: input.serverId,
+          },
+        });
+        const update = await ctx.prisma.role.update({
+          where: { id: role?.id },
+          data: {
+            position: input.position,
+          },
+          include: {
+            members: {
+              include: {
+                roles: true,
+                user: true,
+              },
+            },
+            server: {
+              include: {
+                members: true,
+              },
+            },
+            mentionedIn: true,
+          },
+        });
+        updatedRoles.push(update); //+1
+        for (let i = input.oldPosition; i < input.position; i++) {
+          const role = await ctx.prisma.role.findFirst({
+            where: {
+              position: i + 1,
+              serverid: input.serverId,
+            },
+          });
+          const update = await ctx.prisma.role.update({
+            where: { id: role?.id },
+            data: {
+              position: i,
+            },
+            include: {
+              members: {
+                include: {
+                  roles: true,
+                  user: true,
+                },
+              },
+              server: {
+                include: {
+                  members: true,
+                },
+              },
+              mentionedIn: true,
+            },
+          });
+          updatedRoles.push(update);
+        }
+      }
+      ee.emit("switchRole", updatedRoles);
+      return updatedRoles;
+    }),
+  onRoleSwitch: protectedProcedure.subscription(() => {
+    return observable<Role[]>((emit) => {
+      const onSwitch = (data: Role[]) => emit.next(data);
+      ee.on("switchRole", onSwitch);
+      return () => {
+        ee.off("switchRole", onSwitch);
+      };
+    });
+  }),
+  getRoles: protectedProcedure
+    .input(
+      z.object({
+        serverId: z.string(),
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().nullish(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input.limit ?? 50;
+      const { cursor } = input;
+      const roles = await ctx.prisma.role.findMany({
+        take: limit + 1,
+        where: { server: { id: input.serverId } },
+        cursor: cursor ? { id: cursor } : undefined,
+        orderBy: { position: "desc" },
+        include: {
+          members: {
+            include: {
+              roles: true,
+              user: true,
+            },
+          },
+          server: {
+            include: {
+              members: true,
+            },
+          },
+          mentionedIn: true,
+        },
+      });
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (roles.length > limit) {
+        const nextRole = roles.pop()!;
+        nextCursor = nextRole.id;
+      }
+      return {
+        roles: roles.reverse(),
+        nextCursor,
+      };
+    }),
 });

@@ -1,3 +1,4 @@
+import { timeStamp } from "console";
 import { FC, MutableRefObject, useEffect, useState } from "react";
 import styles from "../../styles/components/modal.module.scss";
 
@@ -8,6 +9,8 @@ type Props = {
   password?: boolean;
   autoComplete?: boolean;
   focus?: boolean;
+  clear?: boolean;
+  onKeyUp?: (key: string) => void;
 };
 
 const ModalInput: FC<Props> = ({
@@ -17,6 +20,8 @@ const ModalInput: FC<Props> = ({
   password,
   autoComplete,
   focus,
+  clear,
+  onKeyUp,
 }) => {
   const [hidden, setHidden] = useState(true);
 
@@ -30,7 +35,26 @@ const ModalInput: FC<Props> = ({
         placeholder={placeholder}
         className={styles.input_field}
         type={type ? type : "text"}
+        onKeyUp={(e) => {
+          if (onKeyUp) onKeyUp(e.key);
+        }}
       />
+      {!password && clear && (
+        <img
+          onClick={() => {
+            const input = document.getElementById(
+              "input_field"
+            ) as HTMLInputElement;
+            input.value = "";
+            input.focus();
+          }}
+          className={styles.clear_button}
+          src="/cross.svg"
+          alt=""
+          width={20}
+          height={20}
+        />
+      )}
       {password && hidden && (
         <img
           onClick={() => {

@@ -3,6 +3,7 @@ import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import type { Message } from "../../../types";
+import { triggerAsyncId } from "async_hooks";
 
 const ee = new EventEmitter();
 export const messageRouter = router({

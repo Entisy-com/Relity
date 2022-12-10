@@ -3,6 +3,7 @@ import { Permission } from "@prisma/client";
 
 export type Server = Prisma.ServerGetPayload<{
   include: {
+    settings: { include: { server: true } };
     textchannel: {
       include: {
         category: true;
@@ -41,7 +42,11 @@ export type Server = Prisma.ServerGetPayload<{
     };
     roles: {
       include: {
-        members: true;
+        members: {
+          include: {
+            user: true;
+          };
+        };
         mentionedIn: true;
         server: true;
       };
@@ -71,6 +76,7 @@ export type Server = Prisma.ServerGetPayload<{
         voiceChannel: true;
       };
     };
+    serverUserPosition: true;
   };
 }>;
 
@@ -79,17 +85,37 @@ export type User = Prisma.UserGetPayload<{
     member: true;
     adminuser: true;
     bannedon: true;
-    friends: true;
+    friends: {
+      include: {
+        member: true;
+        adminuser: true;
+        bannedon: true;
+        friends: true;
+        friendsWith: true;
+        settings: true;
+        serverUserPosition: true;
+      };
+    };
     friendsWith: true;
     settings: true;
+    serverUserPosition: true;
   };
 }>;
 
 export type Role = Prisma.RoleGetPayload<{
   include: {
-    members: true;
+    members: {
+      include: {
+        roles: true;
+        user: true;
+      };
+    };
     mentionedIn: true;
-    server: true;
+    server: {
+      include: {
+        members: true;
+      };
+    };
   };
 }>;
 
@@ -228,6 +254,19 @@ export type Member = Prisma.MemberGetPayload<{
     messages: true;
     ownerOf: true;
     roles: true;
+    server: true;
+    user: true;
+  };
+}>;
+
+export type ServerSettings = Prisma.ServerSettingsGetPayload<{
+  include: {
+    server: true;
+  };
+}>;
+
+export type ServerUserPosition = Prisma.ServerUserPositionGetPayload<{
+  include: {
     server: true;
     user: true;
   };

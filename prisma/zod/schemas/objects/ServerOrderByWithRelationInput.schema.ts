@@ -8,6 +8,8 @@ import { MemberOrderByWithRelationInputObjectSchema } from './MemberOrderByWithR
 import { MemberOrderByRelationAggregateInputObjectSchema } from './MemberOrderByRelationAggregateInput.schema';
 import { UserOrderByRelationAggregateInputObjectSchema } from './UserOrderByRelationAggregateInput.schema';
 import { ActionLogOrderByWithRelationInputObjectSchema } from './ActionLogOrderByWithRelationInput.schema';
+import { ServerUserPositionOrderByRelationAggregateInputObjectSchema } from './ServerUserPositionOrderByRelationAggregateInput.schema';
+import { ServerSettingsOrderByWithRelationInputObjectSchema } from './ServerSettingsOrderByWithRelationInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -42,6 +44,12 @@ const Schema: z.ZodType<Prisma.ServerOrderByWithRelationInput> = z
       .optional(),
     updatedAt: z.lazy(() => SortOrderSchema).optional(),
     createdAt: z.lazy(() => SortOrderSchema).optional(),
+    serverUserPosition: z
+      .lazy(() => ServerUserPositionOrderByRelationAggregateInputObjectSchema)
+      .optional(),
+    settings: z
+      .lazy(() => ServerSettingsOrderByWithRelationInputObjectSchema)
+      .optional(),
   })
   .strict();
 

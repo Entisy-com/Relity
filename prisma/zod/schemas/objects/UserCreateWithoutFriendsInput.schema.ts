@@ -7,6 +7,7 @@ import { UserSettingsCreateNestedOneWithoutUserInputObjectSchema } from './UserS
 import { ServerCreateNestedManyWithoutBannedUserInputObjectSchema } from './ServerCreateNestedManyWithoutBannedUserInput.schema';
 import { UserCreateNestedManyWithoutFriendsInputObjectSchema } from './UserCreateNestedManyWithoutFriendsInput.schema';
 import { MemberCreateNestedManyWithoutUserInputObjectSchema } from './MemberCreateNestedManyWithoutUserInput.schema';
+import { ServerUserPositionCreateNestedManyWithoutUserInputObjectSchema } from './ServerUserPositionCreateNestedManyWithoutUserInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -41,6 +42,11 @@ const Schema: z.ZodType<Prisma.UserCreateWithoutFriendsInput> = z
       .optional(),
     member: z
       .lazy(() => MemberCreateNestedManyWithoutUserInputObjectSchema)
+      .optional(),
+    serverUserPosition: z
+      .lazy(
+        () => ServerUserPositionCreateNestedManyWithoutUserInputObjectSchema,
+      )
       .optional(),
   })
   .strict();

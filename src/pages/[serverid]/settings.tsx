@@ -1,15 +1,15 @@
 import type { GetServerSidePropsContext, NextPage } from "next";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "../../styles/pages/settings.module.scss";
 import serverStyles from "../../styles/pages/serverSettings.module.scss";
 import { trpc } from "../../utils/trpc";
-import { isServerAThing } from "../api/v1/getServer";
+import { isServerAThing, isServerMember } from "../api/v1/getServer";
 import Modal from "../../components/modal/Modal";
 import ModalInput from "../../components/modal/ModalInput";
 import ModalButton from "../../components/modal/ModalButton";
 import ModalTitle from "../../components/modal/ModalTitle";
 import ModalDropdown from "../../components/modal/ModalDropdown";
-import type { Role, User, Permission } from "@prisma/client";
+import { Role, User, Permission } from "@prisma/client";
 import { Action } from "@prisma/client";
 import type { ActionLog, Member, Server } from "../../types";
 import { PermissionOptions } from "../../types";
@@ -17,18 +17,23 @@ import type { ActionType } from "@prisma/client";
 import ModalCheckbox from "../../components/modal/ModalCheckbox";
 import Head from "next/head";
 import { ModalColorPicker } from "../../components/modal";
-import { BASE_URL } from "../../utils/constants";
-import { useSession } from "next-auth/react";
+import { BASE_URL, LOGGER_URL } from "../../utils/constants";
+import { User as AuthUser } from "next-auth";
+import axios from "axios";
+import { Draggable, Droppable } from "react-beautiful-dnd";
+import { getServerAuthSession } from "../../server/common/get-server-auth-session";
+import { handleDeleteServer, handleUnbanUser } from "../../utils/handler";
+import { Role as RoleTypes } from "../../types";
 
 type Props = {
   server: Server;
+  user: AuthUser;
 };
 
-const ServerSettings: NextPage<Props> = ({ server }) => {
-  const { data: session } = useSession();
-  const user = session?.user;
-
+const ServerSettings: NextPage<Props> = ({ server, user }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member>();
+  const [selectedBannedUser, setSelectedBannedUser] = useState<User>();
   const [selectedRole, setSelectedRole] = useState<Role>();
   const [editRoleModalOpen, setEditRoleModalOpen] = useState(false);
   const [createRoleModalOpen, setCreateRoleModalOpen] = useState(false);
@@ -37,8 +42,13 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
   const [roleVisibility, setRoleVisibility] = useState(true);
   const [roleColor, setRoleColor] = useState("#ffffff");
   const [editMemberModalOpen, setEditMemberModalOpen] = useState(false);
+  const [bannedUserInfoModalOpen, setBannedUserInfoModalOpen] = useState(false);
   const [transferOwnershipModalOpen, setTransferOwnershipModalOpen] =
     useState(false);
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   const [transferOwnershipUser, setTransferOwnershipUser] = useState(
     server.members[0]?.id !== server.ownerid
@@ -54,6 +64,10 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
   const updateMember = trpc.user.updateMember.useMutation();
   const updateRole = trpc.roles.updateRole.useMutation();
   const addActionToLog = trpc.server.addActionToActionLog.useMutation();
+  const unbanUser = trpc.server.pardonUserFromServer.useMutation();
+  const updateSettings = trpc.serverSettings.updateSetting.useMutation();
+  const deleteRole = trpc.roles.deleteRole.useMutation();
+
   const { data: actionLogServer } = trpc.server.getActionLogFromServer.useQuery(
     {
       serverId: server.id,
@@ -128,6 +142,10 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
       color: roleColor,
       visible: roleVisibility,
     });
+
+    axios.post(`${LOGGER_URL}`, {
+      message: `Updated Role "${roleNameRef?.current?.value}", ID: ${selectedRole?.id}, `,
+    });
     if (roleNameRef.current && roleNameRef.current.value.trim().length > 0)
       roleNameRef.current.value = "";
     discard(setEditRoleModalOpen);
@@ -153,6 +171,13 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     });
     setTransferOwnershipModalOpen(false);
     window.location.href = `/${server.id}`;
+  }
+
+  function handleDeleteRole() {
+    setEditRoleModalOpen(false);
+    deleteRole.mutate({
+      roleid: selectedRole?.id!,
+    });
   }
 
   function discard(callable: Function) {
@@ -190,6 +215,60 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
     .getMinutes()
     .toString()
     .padStart(2, "0")}:${createAt.getSeconds().toString().padStart(2, "0")}`;
+
+  const { data: u } = trpc.user.getUserByMemberId.useQuery({
+    memberId: server.ownerid,
+  });
+
+  function currentMemberRoles() {
+    let ret = [];
+    for (const r of selectedMember?.roles ?? []) {
+      ret.push({ label: r.name, value: r.id });
+    }
+
+    return ret;
+  }
+
+  const utils = trpc.useContext();
+
+  const rolesQuery = trpc.roles.getRoles.useInfiniteQuery(
+    { serverId: server.id },
+    { getPreviousPageParam: (d) => d.nextCursor }
+  );
+
+  const [serverRoles, setServerRoles] = useState(() => {
+    const roles = rolesQuery.data?.pages.map((page) => page.roles).flat();
+    return roles ?? [];
+  });
+
+  const addServerRoles = useCallback((incoming?: RoleTypes[]) => {
+    setServerRoles((current) => {
+      const map: Record<RoleTypes["id"], RoleTypes> = {};
+      for (const role of current ?? []) {
+        map[role.id] = role;
+      }
+      for (const role of incoming ?? []) {
+        map[role.id] = role;
+      }
+
+      return Object.values(map);
+    });
+  }, []);
+
+  useEffect(() => {
+    const roles = rolesQuery.data?.pages.map((page) => page.roles).flat();
+    addServerRoles(roles);
+  }, [rolesQuery.data?.pages, addServerRoles]);
+
+  trpc.roles.onRoleUpdate.useSubscription(undefined, {
+    onData(roles) {
+      addServerRoles([roles]);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+    },
+  });
+
   return (
     <>
       <Head>
@@ -201,8 +280,8 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
             <h1 className={styles.option_title}>Info</h1>
             <div>
               <h3>Name: {server.name!}</h3>
-              <h3 title={server?.owner?.user?.name ?? ""}>
-                Owner: {server.owner.nickname}
+              <h3 title={server.owner.nickname ? u?.name : u?.id}>
+                Owner: {server.owner.nickname ?? u?.name}
               </h3>
               <h3
                 title={`Textchannel: ${
@@ -238,6 +317,111 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
               </p>
             </div>
           </div>
+          <div id="moderation" className={styles.option}>
+            <>
+              <h1 className={styles.option_title}>Info</h1>
+              <ModalCheckbox
+                value="Show Badges"
+                checked={server.settings?.showBadges}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    showBadges: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Log Channel Updates"
+                checked={server.settings?.logChannelUpdates}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    logChannelUpdates: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Log Joins and Leaves"
+                checked={server.settings?.logJoinLeave}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    logJoinLeave: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Log Member Updates"
+                checked={server.settings?.logMemberUpdates}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    logMemberUpdates: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Log Message Updates"
+                checked={server.settings?.logMessageUpdates}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    logMessageUpdates: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Log Messages"
+                checked={server.settings?.logMessages}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    logMessages: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Log Role Updates"
+                checked={server.settings?.logRoleUpdates}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    logRoleUpdates: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Notify Users on Unban"
+                checked={server.settings?.notifyUnban}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    notifyUnban: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Notify Users on Ban"
+                checked={server.settings?.notifyBan}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    notifyBan: checked,
+                  });
+                }}
+              />
+              <ModalCheckbox
+                value="Notify Users on Kick"
+                checked={server.settings?.notifyKick}
+                onChange={(checked) => {
+                  updateSettings.mutate({
+                    serverId: server.id,
+                    notifyKick: checked,
+                  });
+                }}
+              />
+            </>
+          </div>
           <div id="roles" className={styles.option}>
             <h1 className={styles.option_title}>Roles</h1>
             <p
@@ -248,28 +432,57 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
             >
               Create Role
             </p>
-            <div className={serverStyles.roles}>
-              {server.roles.sort(sortRoles).map((role) => (
-                <p
-                  onClick={() => {
-                    setSelectedRole(role);
-                    setRoleColor(role.color);
-                    setRolePermissions(role.permissions);
-                    setRoleVisibility(role.visible);
-                    setEditRoleModalOpen(true);
-                  }}
-                  key={role.id}
+            {isLoaded ? (
+              <div className={serverStyles.roles}>
+                <Droppable
+                  droppableId="roles"
+                  direction="vertical"
+                  isDropDisabled={false}
                 >
-                  {role.name}
-                </p>
-              ))}
-            </div>
+                  {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef}>
+                      {server.roles.sort(sortRoles).map((role, index) => (
+                        <Draggable
+                          draggableId={`role#${role.id}#${server.id}`}
+                          index={index}
+                          key={role.id}
+                        >
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <p
+                                className={serverStyles.role}
+                                onClick={() => {
+                                  setSelectedRole(role);
+                                  setRoleColor(role.color);
+                                  setRolePermissions(role.permissions);
+                                  setRoleVisibility(role.visible);
+                                  setEditRoleModalOpen(true);
+                                }}
+                                key={role.id}
+                              >
+                                {role.name}
+                              </p>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            ) : null}
           </div>
           <div id="member" className={styles.option}>
             <h1 className={styles.option_title}>Member</h1>
-            <div>
+            <div className={serverStyles.members}>
               {server.members.sort(sortMembers).map((user) => (
                 <p
+                  className={serverStyles.member}
                   onClick={() => {
                     setSelectedMember(user);
                     setEditMemberModalOpen(true);
@@ -306,9 +519,18 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           </div>
           <div id="banned_user" className={styles.option}>
             <h1 className={styles.option_title}>Banned User</h1>
-            <div>
-              {server.bannedUser.sort(sortUsers).map((member) => (
-                <p key={member.id}>{member.name}</p>
+            <div className={serverStyles.member}>
+              {server.bannedUser.sort(sortUsers).map((user) => (
+                <p
+                  className={serverStyles.member}
+                  key={user.id}
+                  onClick={() => {
+                    setSelectedBannedUser(user);
+                    setBannedUserInfoModalOpen(true);
+                  }}
+                >
+                  {user.name}
+                </p>
               ))}
             </div>
           </div>
@@ -355,6 +577,9 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           <span id={styles.separator} />
           <a href="#info" className={styles.option_category}>
             Info
+          </a>
+          <a href="#moderation" className={styles.option_category}>
+            Moderation
           </a>
           <span id={styles.separator} />
           <a href="#roles" className={styles.option_category}>
@@ -454,6 +679,11 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           onChange={(visible) => setRoleVisibility(visible)}
         />
         <ModalButton
+          type="delete"
+          value="Delete Role"
+          onClick={() => handleDeleteRole()}
+        />
+        <ModalButton
           type="complete"
           value="Save Changes!"
           onClick={() => handleUpdateRole()}
@@ -522,10 +752,7 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
             });
             setMemberRoles(memberRoles);
           }}
-          defaultValues={selectedMember?.roles.map((role) => ({
-            label: role.name,
-            value: role.id,
-          }))}
+          defaultValues={currentMemberRoles()}
           options={server.roles.map((role) => {
             return { label: role.name, value: role.id };
           })}
@@ -541,6 +768,22 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
           onClick={() => discard(setEditMemberModalOpen)}
         />
       </Modal>
+      <Modal
+        open={bannedUserInfoModalOpen}
+        setOpen={setBannedUserInfoModalOpen}
+        closable
+        blur
+        darken="4"
+      >
+        <ModalTitle value={selectedBannedUser?.name ?? ""} />
+        <ModalButton
+          onClick={() =>
+            handleUnbanUser(selectedBannedUser!, server.id, unbanUser)
+          }
+          type="delete"
+          value="Unban User!"
+        />
+      </Modal>
     </>
   );
 };
@@ -548,11 +791,40 @@ const ServerSettings: NextPage<Props> = ({ server }) => {
 export default ServerSettings;
 
 export async function getServerSideProps(ctx: GetServerSidePropsContext) {
+  const session = await getServerAuthSession(ctx);
   const server = await isServerAThing(ctx.req, ctx.res);
+  const flag1 = await isServerMember(ctx.req, ctx.res, session?.user?.id ?? "");
+
+  function isUserBanned() {
+    for (const u of server?.bannedUser ?? []) {
+      if (u.id === session?.user?.id ?? "") return true;
+    }
+    return false;
+  }
+
+  function hasPermission() {
+    for (const r of server?.roles ?? []) {
+      if (!r.permissions.includes(Permission.MANAGE_SERVER)) continue;
+      for (const m of r.members) {
+        if (m.userId === session?.user?.id ?? "") return true;
+      }
+    }
+    if (server?.owner.userId === session?.user?.id) return true;
+    return false;
+  }
+
+  if (!flag1 || !hasPermission())
+    return { redirect: { destination: `/${server?.id}`, persistent: false } };
+
+  if (isUserBanned())
+    return {
+      redirect: { destination: `/${server?.id}/invite`, persistent: false },
+    };
   return server
     ? {
         props: {
           server: JSON.parse(JSON.stringify(server)),
+          user: session?.user,
         },
       }
     : { props: {} };

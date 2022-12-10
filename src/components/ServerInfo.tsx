@@ -5,7 +5,20 @@ import type { FC } from "react";
 import { useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
 import type { Member, Server, TextChannel, User, VoiceChannel } from "../types";
-import { BASE_URL, CDN_API_URL, CDN_BASE_URL } from "../utils/constants";
+import {
+  BASE_URL,
+  CDN_API_URL,
+  CDN_BASE_URL,
+  LOGGER_URL,
+} from "../utils/constants";
+import {
+  handleKickMember,
+  handleBanUser,
+  handleDeleteVoiceChannel,
+  handleDeleteTextChannel,
+  hasPermission,
+  handleDeleteServer,
+} from "../utils/handler";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
 import Modal from "./modal/Modal";
@@ -15,7 +28,7 @@ import ModalImage from "./modal/ModalImage";
 import ModalInput from "./modal/ModalInput";
 import ModalText from "./modal/ModalText";
 import ModalTitle from "./modal/ModalTitle";
-import UserList from "./UserList";
+import MemberList from "./MemberList";
 
 type Props = {
   server: Server;
@@ -25,26 +38,6 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const { data: session } = useSession();
   const user = session?.user;
   const utils = trpc.useContext();
-
-  function isOwner(server: Server) {
-    for (const member of server.members) {
-      if (member.userId === user?.id) {
-        if (server.ownerid === member.id) return true;
-      }
-    }
-    return false;
-  }
-
-  function hasPermission(server: Server, permission: Permission) {
-    for (const role of server.roles) {
-      if (role.permissions.includes(permission)) {
-        for (const member of role.members) {
-          if (member.userId === user?.id) return true;
-        }
-      }
-    }
-    return false;
-  }
 
   const [serverOptionsModalOpen, setServerOptionsModalOpen] = useState(false);
   const [serverMemberModalOpen, setServerMemberModalOpen] = useState(false);
@@ -73,6 +66,8 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const deleteServer = trpc.server.deleteServer.useMutation();
   const deleteTextChannel = trpc.textChannel.deleteChannel.useMutation();
   const deleteVoiceChannel = trpc.voiceChannel.deleteChannel.useMutation();
+  const leaveServer = trpc.user.leaveServer.useMutation();
+  const banUser = trpc.server.banUserFromServer.useMutation();
 
   const tcRef = useRef<HTMLInputElement>(null);
   const vcRef = useRef<HTMLInputElement>(null);
@@ -90,48 +85,6 @@ const ServerInfo: FC<Props> = ({ server }) => {
       utils.server.getServerById.invalidate();
     },
   });
-
-  function handleDeleteServer() {
-    if (!deleteRef.current || !repeatDeleteRef.current) return;
-    if (
-      !(deleteRef.current.value.trim().length > 0) ||
-      !(repeatDeleteRef.current.value.trim().length > 0)
-    )
-      return;
-    if (deleteRef.current.value.trim() !== repeatDeleteRef.current.value.trim())
-      return;
-    if (deleteRef.current.value.trim() !== server?.name.trim()) return;
-    deleteServer.mutate({ id: server?.id! });
-  }
-
-  function handleDeleteTextChannel() {
-    if (!deleteRef.current || !repeatDeleteRef.current) return;
-    if (
-      !(deleteRef.current.value.trim().length > 0) ||
-      !(repeatDeleteRef.current.value.trim().length > 0)
-    )
-      return;
-    if (deleteRef.current.value.trim() !== repeatDeleteRef.current.value.trim())
-      return;
-    if (deleteRef.current.value.trim() !== selectedTextChannel?.name.trim())
-      return;
-    deleteTextChannel.mutate({ id: selectedTextChannel?.id! });
-    window.location.href = `/${server.id}`;
-  }
-
-  function handleDeleteVoiceChannel() {
-    if (!deleteRef.current || !repeatDeleteRef.current) return;
-    if (
-      !(deleteRef.current.value.trim().length > 0) ||
-      !(repeatDeleteRef.current.value.trim().length > 0)
-    )
-      return;
-    if (deleteRef.current.value.trim() !== repeatDeleteRef.current.value.trim())
-      return;
-    if (deleteRef.current.value.trim() !== selectedVoiceChannel?.name.trim())
-      return;
-    deleteVoiceChannel.mutate({ id: selectedVoiceChannel?.id! });
-  }
 
   async function handleChangeImage(file: File) {
     const formData = new FormData();
@@ -162,19 +115,13 @@ const ServerInfo: FC<Props> = ({ server }) => {
       <div className={styles.wrapper}>
         <p
           onClick={() => {
-            if (
-              isOwner(server) ||
-              hasPermission(server, Permission.MANAGE_SERVER)
-            )
+            if (hasPermission(user.id, server, Permission.MANAGE_SERVER))
               setServerOptionsModalOpen(true);
             else setServerMemberModalOpen(true);
           }}
           onContextMenu={(e) => {
             e.preventDefault();
-            if (
-              isOwner(server) ||
-              hasPermission(server, Permission.MANAGE_SERVER)
-            )
+            if (hasPermission(user.id, server, Permission.MANAGE_SERVER))
               setServerInfoModalOpen(true);
             else setServerMemberModalOpen(true);
           }}
@@ -189,16 +136,13 @@ const ServerInfo: FC<Props> = ({ server }) => {
           setTextChannelSettingsModalOpen={setTextChannelSettingsModalOpen}
           voiceChannelSettingsModalOpen={voiceChannelSettingsModalOpen}
           setVoiceChannelSettingsModalOpen={setVoiceChannelSettingsModalOpen}
-          serverid={server.id}
+          server={server}
         />
-        <UserList
-          ownerId={server.ownerid}
+        <MemberList
           setSelectedMember={setSelectedMember}
           memberInfoModalOpen={memberInfoModalOpen}
           setMemberInfoModalOpen={setMemberInfoModalOpen}
-          type="server"
-          roles={server.roles}
-          members={server.members}
+          server={server}
         />
       </div>
       <Modal
@@ -324,6 +268,34 @@ const ServerInfo: FC<Props> = ({ server }) => {
               : ""
           }
         />
+        {hasPermission(user.id, server, Permission.KICK_MEMBERS) &&
+        selectedMember?.userId !== user.id &&
+        selectedMember?.id !== server.ownerid ? (
+          <ModalButton
+            value="Kick User"
+            onClick={() => {
+              handleKickMember(server.id, selectedMember!, leaveServer);
+              setMemberInfoModalOpen(false);
+            }}
+            type="delete"
+          />
+        ) : (
+          <></>
+        )}
+        {hasPermission(user.id, server, Permission.BAN_MEMBERS) &&
+        selectedMember?.userId !== user.id &&
+        selectedMember?.id !== server.ownerid ? (
+          <ModalButton
+            value="Ban User"
+            onClick={() => {
+              handleBanUser(server.id, selectedMember!, banUser);
+              setMemberInfoModalOpen(false);
+            }}
+            type="delete"
+          />
+        ) : (
+          <></>
+        )}
         {selectedMember?.id === user.id ? (
           <ModalButton
             value="Settings"
@@ -396,7 +368,12 @@ const ServerInfo: FC<Props> = ({ server }) => {
           value="Delete Server!"
           onClick={() => {
             setDeleteServerModalOpen(false);
-            handleDeleteServer();
+            handleDeleteServer(
+              deleteRef,
+              repeatDeleteRef,
+              server,
+              deleteServer
+            );
           }}
         />
       </Modal>
@@ -415,7 +392,13 @@ const ServerInfo: FC<Props> = ({ server }) => {
           value="Delete Channel!"
           onClick={() => {
             setDeleteTextChannelModalOpen(false);
-            handleDeleteTextChannel();
+            handleDeleteTextChannel(
+              deleteRef,
+              repeatDeleteRef,
+              selectedTextChannel!,
+              server.id,
+              deleteTextChannel
+            );
           }}
         />
       </Modal>
@@ -434,7 +417,12 @@ const ServerInfo: FC<Props> = ({ server }) => {
           value="Delete Channel!"
           onClick={() => {
             setDeleteVoiceChannelModalOpen(false);
-            handleDeleteVoiceChannel();
+            handleDeleteVoiceChannel(
+              deleteRef,
+              repeatDeleteRef,
+              selectedVoiceChannel!,
+              deleteVoiceChannel
+            );
           }}
         />
       </Modal>

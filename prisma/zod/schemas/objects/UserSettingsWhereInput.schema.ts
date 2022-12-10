@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { StringFilterObjectSchema } from './StringFilter.schema';
 import { UserRelationFilterObjectSchema } from './UserRelationFilter.schema';
 import { UserWhereInputObjectSchema } from './UserWhereInput.schema';
+import { BoolFilterObjectSchema } from './BoolFilter.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -34,6 +35,15 @@ const Schema: z.ZodType<Prisma.UserSettingsWhereInput> = z
         z.lazy(() => UserRelationFilterObjectSchema),
         z.lazy(() => UserWhereInputObjectSchema),
       ])
+      .optional(),
+    notifyUnban: z
+      .union([z.lazy(() => BoolFilterObjectSchema), z.boolean()])
+      .optional(),
+    notifyBan: z
+      .union([z.lazy(() => BoolFilterObjectSchema), z.boolean()])
+      .optional(),
+    notifyKick: z
+      .union([z.lazy(() => BoolFilterObjectSchema), z.boolean()])
       .optional(),
   })
   .strict();

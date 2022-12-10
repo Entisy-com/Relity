@@ -7,6 +7,8 @@ import { MemberCreateNestedOneWithoutOwnerOfInputObjectSchema } from './MemberCr
 import { MemberCreateNestedManyWithoutServerInputObjectSchema } from './MemberCreateNestedManyWithoutServerInput.schema';
 import { UserCreateNestedManyWithoutBannedonInputObjectSchema } from './UserCreateNestedManyWithoutBannedonInput.schema';
 import { ActionLogCreateNestedOneWithoutServerInputObjectSchema } from './ActionLogCreateNestedOneWithoutServerInput.schema';
+import { ServerUserPositionCreateNestedManyWithoutServerInputObjectSchema } from './ServerUserPositionCreateNestedManyWithoutServerInput.schema';
+import { ServerSettingsCreateNestedOneWithoutServerInputObjectSchema } from './ServerSettingsCreateNestedOneWithoutServerInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -40,6 +42,14 @@ const Schema: z.ZodType<Prisma.ServerCreateInput> = z
       .optional(),
     updatedAt: z.date().optional(),
     createdAt: z.date().optional(),
+    serverUserPosition: z
+      .lazy(
+        () => ServerUserPositionCreateNestedManyWithoutServerInputObjectSchema,
+      )
+      .optional(),
+    settings: z
+      .lazy(() => ServerSettingsCreateNestedOneWithoutServerInputObjectSchema)
+      .optional(),
   })
   .strict();
 

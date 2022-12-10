@@ -92,21 +92,24 @@ model Role {
 }
 
 model Server {
-    id           String         @id @default(uuid())
-    name         String
-    ownerid      String         @unique
-    pfp          String         @default("")
-    banner       String         @default("")
-    categories   Category[]
-    roles        Role[]
-    textchannel  TextChannel[]
-    voicechannel VoiceChannel[]
-    owner        Member         @relation("ownerOf", fields: [ownerid], references: [id], onDelete: Cascade)
-    members      Member[]       @relation("members")
-    bannedUser   User[]         @relation("bannedusers")
-    actionLog    ActionLog?
-    updatedAt    DateTime       @updatedAt
-    createdAt    DateTime       @default(now())
+    id                 String               @id @default(uuid())
+    name               String
+    ownerid            String               @unique
+    pfp                String               @default("")
+    banner             String               @default("")
+    categories         Category[]
+    roles              Role[]
+    textchannel        TextChannel[]
+    voicechannel       VoiceChannel[]
+    owner              Member               @relation("ownerOf", fields: [ownerid], references: [id], onDelete: Cascade)
+    members            Member[]             @relation("members")
+    bannedUser         User[]               @relation("bannedusers")
+    actionLog          ActionLog?
+    updatedAt          DateTime             @updatedAt
+    createdAt          DateTime             @default(now())
+    serverUserPosition ServerUserPosition[] @relation("serverUserPosition")
+    settings           ServerSettings       @relation("serverSettings", fields: [serverSettingsId], references: [id])
+    serverSettingsId   String               @unique
 }
 
 model Account {
@@ -139,7 +142,7 @@ model Session {
 
 model Member {
     id             String        @id @default(uuid())
-    user           User          @relation(fields: [userId], references: [id])
+    user           User          @relation(fields: [userId], references: [id], "userToMember")
     userId         String
     pfp            String?
     banner         String?
@@ -156,23 +159,24 @@ model Member {
 }
 
 model User {
-    id            String        @id @default(uuid())
-    name          String
-    email         String        @unique
-    emailVerified DateTime?
-    image         String
-    banner        String?
-    status        OnlineStatus  @default(OFFLINE)
-    createdAt     DateTime      @default(now())
-    updatedAt     DateTime      @updatedAt
-    accounts      Account[]
-    adminuser     AdminUser?
-    sessions      Session[]
-    settings      UserSettings?
-    bannedon      Server[]      @relation("bannedusers")
-    friends       User[]        @relation("friends")
-    friendsWith   User[]        @relation("friends")
-    member        Member[]
+    id                 String               @id @default(uuid())
+    name               String
+    email              String               @unique
+    emailVerified      DateTime?
+    image              String
+    banner             String?
+    status             OnlineStatus         @default(OFFLINE)
+    createdAt          DateTime             @default(now())
+    updatedAt          DateTime             @updatedAt
+    accounts           Account[]
+    adminuser          AdminUser?
+    sessions           Session[]
+    settings           UserSettings?
+    bannedon           Server[]             @relation("bannedusers")
+    friends            User[]               @relation("friends")
+    friendsWith        User[]               @relation("friends")
+    member             Member[]             @relation("userToMember")
+    serverUserPosition ServerUserPosition[] @relation("userServerPosition")
 }
 
 model ActionLog {
@@ -193,9 +197,40 @@ model ActionType {
 }
 
 model UserSettings {
-    id     String @id @default(uuid())
-    userid String @unique
-    user   User   @relation(fields: [userid], references: [id])
+    id          String  @id @default(uuid())
+    userid      String  @unique
+    user        User    @relation(fields: [userid], references: [id])
+    notifyUnban Boolean @default(true)
+    notifyBan   Boolean @default(true)
+    notifyKick  Boolean @default(true)
+}
+
+model ServerSettings {
+    id                String  @id @default(uuid())
+    serverid          String? @unique
+    server            Server? @relation("serverSettings")
+    logRoleUpdates    Boolean
+    logMemberUpdates  Boolean
+    logChannelUpdates Boolean
+    logMessageUpdates Boolean
+
+    logMessages  Boolean
+    logJoinLeave Boolean
+
+    notifyUnban Boolean
+    notifyBan   Boolean
+    notifyKick  Boolean
+
+    showBadges Boolean
+}
+
+model ServerUserPosition {
+    id       String @id @default(uuid())
+    server   Server @relation(fields: [serverId], references: [id], "serverUserPosition")
+    user     User   @relation(fields: [userId], references: [id], "userServerPosition")
+    serverId String
+    userId   String
+    position Int    @default(autoincrement())
 }
 
 model VerificationToken {

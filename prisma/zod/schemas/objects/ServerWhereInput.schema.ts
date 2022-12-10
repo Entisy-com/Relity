@@ -11,6 +11,9 @@ import { UserListRelationFilterObjectSchema } from './UserListRelationFilter.sch
 import { ActionLogRelationFilterObjectSchema } from './ActionLogRelationFilter.schema';
 import { ActionLogWhereInputObjectSchema } from './ActionLogWhereInput.schema';
 import { DateTimeFilterObjectSchema } from './DateTimeFilter.schema';
+import { ServerUserPositionListRelationFilterObjectSchema } from './ServerUserPositionListRelationFilter.schema';
+import { ServerSettingsRelationFilterObjectSchema } from './ServerSettingsRelationFilter.schema';
+import { ServerSettingsWhereInputObjectSchema } from './ServerSettingsWhereInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -76,6 +79,16 @@ const Schema: z.ZodType<Prisma.ServerWhereInput> = z
     createdAt: z
       .union([z.lazy(() => DateTimeFilterObjectSchema), z.date()])
       .optional(),
+    serverUserPosition: z
+      .lazy(() => ServerUserPositionListRelationFilterObjectSchema)
+      .optional(),
+    settings: z
+      .union([
+        z.lazy(() => ServerSettingsRelationFilterObjectSchema),
+        z.lazy(() => ServerSettingsWhereInputObjectSchema),
+      ])
+      .optional()
+      .nullable(),
   })
   .strict();
 

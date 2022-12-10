@@ -29,8 +29,12 @@ const ModalDropdown: FC<Props> = ({
   placeholder,
 }) => {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(defaultValue);
-  const [values, setValues] = useState<Option[]>(defaultValues ?? []);
+  const [value, setValue] = useState<Option>(
+    defaultValue ?? { label: null, value: null }
+  );
+  const [values, setValues] = useState<Option[]>(
+    defaultValues ?? [{ label: null, value: null }]
+  );
   const [highlighted, setHighlighted] = useState(options![0]);
 
   useEffect(() => {
@@ -45,23 +49,34 @@ const ModalDropdown: FC<Props> = ({
     >
       <span className={styles.dropdown_value}>
         {values.length
-          ? values.map((option) => (
-              <button
-                className={styles.option_badge}
-                key={option.label}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (values.includes(option))
-                    setValues(values.filter((o) => o !== option));
-                  else setValues([...values, option]);
-                  if (onSelectMultiple) onSelectMultiple([...values, option]);
-                }}
-              >
-                {option.label}
-                <span className={styles.dropdown_remove_button}>&times;</span>
-              </button>
-            ))
+          ? values.map((option) => {
+              return (
+                option.label !== null && (
+                  <button
+                    className={styles.option_badge}
+                    key={option.label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (values.includes(option)) {
+                        setValues(values.filter((o) => o !== option));
+                        if (onSelectMultiple)
+                          onSelectMultiple(values.filter((o) => o !== option));
+                      } else {
+                        setValues([...values, option]);
+                        if (onSelectMultiple)
+                          onSelectMultiple([...values, option]);
+                      }
+                    }}
+                  >
+                    {option.label}
+                    <span className={styles.dropdown_remove_button}>
+                      &times;
+                    </span>
+                  </button>
+                )
+              );
+            })
           : placeholder}
       </span>
       <button
@@ -117,7 +132,7 @@ const ModalDropdown: FC<Props> = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setValue(undefined);
+            setValue({ label: null, value: null });
           }}
           className={styles.dropdown_clear_button}
         >

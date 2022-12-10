@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { StringWithAggregatesFilterObjectSchema } from './StringWithAggregatesFilter.schema';
+import { BoolWithAggregatesFilterObjectSchema } from './BoolWithAggregatesFilter.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -30,6 +31,15 @@ const Schema: z.ZodType<Prisma.UserSettingsScalarWhereWithAggregatesInput> = z
       .optional(),
     userid: z
       .union([z.lazy(() => StringWithAggregatesFilterObjectSchema), z.string()])
+      .optional(),
+    notifyUnban: z
+      .union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()])
+      .optional(),
+    notifyBan: z
+      .union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()])
+      .optional(),
+    notifyKick: z
+      .union([z.lazy(() => BoolWithAggregatesFilterObjectSchema), z.boolean()])
       .optional(),
   })
   .strict();

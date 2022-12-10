@@ -10,6 +10,9 @@ const Schema: z.ZodType<Prisma.UserSettingsOrderByWithAggregationInput> = z
   .object({
     id: z.lazy(() => SortOrderSchema).optional(),
     userid: z.lazy(() => SortOrderSchema).optional(),
+    notifyUnban: z.lazy(() => SortOrderSchema).optional(),
+    notifyBan: z.lazy(() => SortOrderSchema).optional(),
+    notifyKick: z.lazy(() => SortOrderSchema).optional(),
     _count: z
       .lazy(() => UserSettingsCountOrderByAggregateInputObjectSchema)
       .optional(),

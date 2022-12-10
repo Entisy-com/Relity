@@ -14,6 +14,7 @@ import { UserSettingsWhereInputObjectSchema } from './UserSettingsWhereInput.sch
 import { ServerListRelationFilterObjectSchema } from './ServerListRelationFilter.schema';
 import { UserListRelationFilterObjectSchema } from './UserListRelationFilter.schema';
 import { MemberListRelationFilterObjectSchema } from './MemberListRelationFilter.schema';
+import { ServerUserPositionListRelationFilterObjectSchema } from './ServerUserPositionListRelationFilter.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -87,6 +88,9 @@ const Schema: z.ZodType<Prisma.UserWhereInput> = z
     friends: z.lazy(() => UserListRelationFilterObjectSchema).optional(),
     friendsWith: z.lazy(() => UserListRelationFilterObjectSchema).optional(),
     member: z.lazy(() => MemberListRelationFilterObjectSchema).optional(),
+    serverUserPosition: z
+      .lazy(() => ServerUserPositionListRelationFilterObjectSchema)
+      .optional(),
   })
   .strict();
 

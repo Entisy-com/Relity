@@ -5,6 +5,8 @@ import { VoiceChannelUncheckedCreateNestedManyWithoutServerInputObjectSchema } f
 import { MemberUncheckedCreateNestedManyWithoutServerInputObjectSchema } from './MemberUncheckedCreateNestedManyWithoutServerInput.schema';
 import { UserUncheckedCreateNestedManyWithoutBannedonInputObjectSchema } from './UserUncheckedCreateNestedManyWithoutBannedonInput.schema';
 import { ActionLogUncheckedCreateNestedOneWithoutServerInputObjectSchema } from './ActionLogUncheckedCreateNestedOneWithoutServerInput.schema';
+import { ServerUserPositionUncheckedCreateNestedManyWithoutServerInputObjectSchema } from './ServerUserPositionUncheckedCreateNestedManyWithoutServerInput.schema';
+import { ServerSettingsUncheckedCreateNestedOneWithoutServerInputObjectSchema } from './ServerSettingsUncheckedCreateNestedOneWithoutServerInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -43,6 +45,18 @@ const Schema: z.ZodType<Prisma.ServerUncheckedCreateWithoutCategoriesInput> = z
       .optional(),
     updatedAt: z.date().optional(),
     createdAt: z.date().optional(),
+    serverUserPosition: z
+      .lazy(
+        () =>
+          ServerUserPositionUncheckedCreateNestedManyWithoutServerInputObjectSchema,
+      )
+      .optional(),
+    settings: z
+      .lazy(
+        () =>
+          ServerSettingsUncheckedCreateNestedOneWithoutServerInputObjectSchema,
+      )
+      .optional(),
   })
   .strict();
 

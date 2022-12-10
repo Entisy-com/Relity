@@ -24,42 +24,56 @@ const Modal: FC<Props> = ({
 }) => {
   useEffect(() => {
     document.addEventListener("keydown", (e) => {
-      if (e.keyCode !== 27 && e.key !== "Escape") return;
-      if (open) {
-        if (closable) setOpen(false);
+      if (e.key === "Escape") {
+        if (open) {
+          if (closable) setOpen(false);
+        }
+      }
+      if (e.key === "Enter") {
+        if (onSubmit) onSubmit();
       }
     });
   }, [open, setOpen]);
 
   return (
-    <div className={styles.wrapper}>
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }}
+      className={styles.wrapper}
+    >
       {open && (
-        <form
-          onSubmit={() => {
-            if (onSubmit) onSubmit();
-          }}
+        <div
+          // onBlur={() => setOpen(false)}
           ref={ref}
           className={`${styles.modal} ${blur && styles.blur} ${
-            darken && styles.darken
+            darken === true && styles.darken
           }`}
           style={{
             backgroundColor: `rgba(0, 0, 0, 0.${darken})`,
           }}
         >
-          {closable && (
-            <img
-              onClick={() => {
-                setOpen(false);
-              }}
-              className={styles.close_button}
-              src="/cross.svg"
-              alt=""
-              width={20}
-              height={20}
-            />
-          )}
-          {children}
-        </form>
+          <form
+            onSubmit={() => {
+              if (onSubmit) onSubmit();
+            }}
+          >
+            {closable && (
+              <img
+                onClick={() => {
+                  setOpen(false);
+                }}
+                className={styles.close_button}
+                src="/cross.svg"
+                alt=""
+                width={20}
+                height={20}
+              />
+            )}
+            {children}
+          </form>
+        </div>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { UserSettingsOrderByWithRelationInputObjectSchema } from './UserSettings
 import { ServerOrderByRelationAggregateInputObjectSchema } from './ServerOrderByRelationAggregateInput.schema';
 import { UserOrderByRelationAggregateInputObjectSchema } from './UserOrderByRelationAggregateInput.schema';
 import { MemberOrderByRelationAggregateInputObjectSchema } from './MemberOrderByRelationAggregateInput.schema';
+import { ServerUserPositionOrderByRelationAggregateInputObjectSchema } from './ServerUserPositionOrderByRelationAggregateInput.schema';
 
 import type { Prisma } from '@prisma/client';
 
@@ -44,6 +45,9 @@ const Schema: z.ZodType<Prisma.UserOrderByWithRelationInput> = z
       .optional(),
     member: z
       .lazy(() => MemberOrderByRelationAggregateInputObjectSchema)
+      .optional(),
+    serverUserPosition: z
+      .lazy(() => ServerUserPositionOrderByRelationAggregateInputObjectSchema)
       .optional(),
   })
   .strict();
