@@ -33,18 +33,7 @@ export const messageRouter = router({
           },
         },
         include: {
-          author: {
-            include: {
-              voiceChannel: true,
-              user: true,
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-            },
-          },
+          author: true,
           mentionedRoles: true,
           mentionedMembers: true,
           textChannel: true,
@@ -53,15 +42,6 @@ export const messageRouter = router({
       ee.emit("addMessage", message);
       return message;
     }),
-  onMessageCreate: protectedProcedure.subscription(() => {
-    return observable<Message>((emit) => {
-      const onCreate = (data: Message) => emit.next(data);
-      ee.on("addMessage", onCreate);
-      return () => {
-        ee.off("addMessage", onCreate);
-      };
-    });
-  }),
   deleteMessage: protectedProcedure
     .input(
       z.object({
@@ -72,18 +52,7 @@ export const messageRouter = router({
       const message = await ctx.prisma.message.delete({
         where: { id: input.id },
         include: {
-          author: {
-            include: {
-              voiceChannel: true,
-              user: true,
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-            },
-          },
+          author: true,
           mentionedRoles: true,
           mentionedMembers: true,
           textChannel: true,
@@ -92,15 +61,6 @@ export const messageRouter = router({
       ee.emit("removeMessage", message);
       return message;
     }),
-  onMessageDelete: protectedProcedure.subscription(() => {
-    return observable<Message>((emit) => {
-      const onDelete = (data: Message) => emit.next(data);
-      ee.on("removeMessage", onDelete);
-      return () => {
-        ee.off("removeMessage", onDelete);
-      };
-    });
-  }),
   getMessageById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
@@ -109,16 +69,32 @@ export const messageRouter = router({
           id: input.id,
         },
         include: {
+          author: true,
+          mentionedRoles: true,
+          mentionedMembers: true,
+          textChannel: true,
+        },
+      });
+      return message;
+    }),
+  getMessagesByChannelId: protectedProcedure
+    .input(z.object({ channelid: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const messages = await ctx.prisma.message.findMany({
+        where: {
+          textChannelId: input.channelid,
+        },
+        include: {
           author: {
             include: {
-              voiceChannel: true,
-              user: true,
               actionType: true,
               mentionedIn: true,
               messages: true,
               ownerOf: true,
               roles: true,
               server: true,
+              user: true,
+              voiceChannel: true,
             },
           },
           mentionedRoles: true,
@@ -126,7 +102,7 @@ export const messageRouter = router({
           textChannel: true,
         },
       });
-      return message;
+      return messages;
     }),
   getMessages: protectedProcedure
     .input(
@@ -143,18 +119,7 @@ export const messageRouter = router({
         take: limit + 1,
         where: { textChannelId: input.channelId },
         include: {
-          author: {
-            include: {
-              voiceChannel: true,
-              user: true,
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-            },
-          },
+          author: true,
           mentionedRoles: true,
           mentionedMembers: true,
           textChannel: true,
@@ -177,4 +142,22 @@ export const messageRouter = router({
         nextCursor,
       };
     }),
+  onMessageCreate: protectedProcedure.subscription(() => {
+    return observable<Message>((emit) => {
+      const onCreate = (data: Message) => emit.next(data);
+      ee.on("addMessage", onCreate);
+      return () => {
+        ee.off("addMessage", onCreate);
+      };
+    });
+  }),
+  onMessageDelete: protectedProcedure.subscription(() => {
+    return observable<Message>((emit) => {
+      const onDelete = (data: Message) => emit.next(data);
+      ee.on("removeMessage", onDelete);
+      return () => {
+        ee.off("removeMessage", onDelete);
+      };
+    });
+  }),
 });

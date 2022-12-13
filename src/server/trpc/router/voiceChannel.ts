@@ -31,15 +31,6 @@ export const voiceChannelRouter = router({
       ee.emit("addVoiceChannel", channel);
       return channel;
     }),
-  onChannelCreate: protectedProcedure.subscription(() => {
-    return observable<VoiceChannel>((emit) => {
-      const onCreate = (data: VoiceChannel) => emit.next(data);
-      ee.on("addVoiceChannel", onCreate);
-      return () => {
-        ee.off("addVoiceChannel", onCreate);
-      };
-    });
-  }),
   deleteChannel: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -57,15 +48,6 @@ export const voiceChannelRouter = router({
       ee.emit("deleteChannel", deleteChannel);
       return deleteChannel;
     }),
-  onChannelDelete: protectedProcedure.subscription(() => {
-    return observable<VoiceChannel>((emit) => {
-      const onDelete = (data: VoiceChannel) => emit.next(data);
-      ee.on("deleteChannel", onDelete);
-      return () => {
-        ee.off("deleteChannel", onDelete);
-      };
-    });
-  }),
   leaveChannel: protectedProcedure
     .input(z.object({ memberId: z.string(), channelId: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -95,15 +77,6 @@ export const voiceChannelRouter = router({
       ee.emit("leaveChannel", channel);
       return update;
     }),
-  onLeaveChannel: protectedProcedure.subscription(() => {
-    return observable<VoiceChannel>((emit) => {
-      const onLeave = (data: VoiceChannel) => emit.next(data);
-      ee.on("leaveChannel", onLeave);
-      return () => {
-        ee.off("leaveChannel", onLeave);
-      };
-    });
-  }),
   joinChannel: protectedProcedure
     .input(z.object({ memberId: z.string(), channelId: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -132,15 +105,6 @@ export const voiceChannelRouter = router({
       ee.emit("joinChannel", channel);
       return update;
     }),
-  onJoinChannel: protectedProcedure.subscription(() => {
-    return observable<VoiceChannel>((emit) => {
-      const onJoin = (data: VoiceChannel) => emit.next(data);
-      ee.on("joinChannel", onJoin);
-      return () => {
-        ee.off("joinChannel", onJoin);
-      };
-    });
-  }),
   getChannelById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
@@ -173,11 +137,7 @@ export const voiceChannelRouter = router({
         include: {
           category: true,
           server: true,
-          members: {
-            include: {
-              user: true,
-            },
-          },
+          members: true,
         },
         cursor: cursor
           ? {
@@ -197,4 +157,40 @@ export const voiceChannelRouter = router({
         nextCursor,
       };
     }),
+  onJoinChannel: protectedProcedure.subscription(() => {
+    return observable<VoiceChannel>((emit) => {
+      const onJoin = (data: VoiceChannel) => emit.next(data);
+      ee.on("joinChannel", onJoin);
+      return () => {
+        ee.off("joinChannel", onJoin);
+      };
+    });
+  }),
+  onLeaveChannel: protectedProcedure.subscription(() => {
+    return observable<VoiceChannel>((emit) => {
+      const onLeave = (data: VoiceChannel) => emit.next(data);
+      ee.on("leaveChannel", onLeave);
+      return () => {
+        ee.off("leaveChannel", onLeave);
+      };
+    });
+  }),
+  onChannelCreate: protectedProcedure.subscription(() => {
+    return observable<VoiceChannel>((emit) => {
+      const onCreate = (data: VoiceChannel) => emit.next(data);
+      ee.on("addVoiceChannel", onCreate);
+      return () => {
+        ee.off("addVoiceChannel", onCreate);
+      };
+    });
+  }),
+  onChannelDelete: protectedProcedure.subscription(() => {
+    return observable<VoiceChannel>((emit) => {
+      const onDelete = (data: VoiceChannel) => emit.next(data);
+      ee.on("deleteChannel", onDelete);
+      return () => {
+        ee.off("deleteChannel", onDelete);
+      };
+    });
+  }),
 });

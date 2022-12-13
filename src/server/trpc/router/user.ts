@@ -9,255 +9,38 @@ import { OnlineStatus, Permission } from "@prisma/client";
 const ee = new EventEmitter();
 
 export const userRouter = router({
-  joinServer: protectedProcedure
-    .input(z.object({ userId: z.string(), serverId: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      const server = await ctx.prisma.server.findUnique({
-        where: { id: input.serverId },
-      });
-      if (!server) throw new TRPCError({ code: "NOT_FOUND" });
-      const everyoneRole = await ctx.prisma.role.findFirst({
-        where: { serverid: input.serverId, name: "Member" },
-      });
-      if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
-      const member = await ctx.prisma.member.create({
-        data: {
-          server: {
-            connect: {
-              id: server.id,
-            },
-          },
-          user: {
-            connect: {
-              id: input.userId,
-            },
-          },
-          roles: {
-            connect: {
-              id: everyoneRole.id,
-            },
-          },
-        },
-      });
-
-      ee.emit("joinServer", member);
-      return member;
-    }),
-  onJoinServer: protectedProcedure.subscription(() => {
-    return observable<User>((emit) => {
-      const onJoin = (data: User) => emit.next(data);
-      ee.on("joinServer", onJoin);
-      return () => {
-        ee.off("joinServer", onJoin);
-      };
-    });
-  }),
-  updateUser: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        name: z.string().optional(),
-        image: z.string().optional(),
-        status: z.nativeEnum(OnlineStatus).optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const update = await ctx.prisma.user.update({
-        where: {
-          id: input.id,
-        },
-        data: {
-          image: input.image,
-          name: input.name,
-          status: input.status,
-        },
-      });
-      ee.emit("updateUser", update);
-      return update;
-    }),
-  onUpdateUser: protectedProcedure.subscription(() => {
-    return observable<User>((emit) => {
-      const onUpdate = (data: User) => emit.next(data);
-      ee.on("updateUser", onUpdate);
-      return () => {
-        ee.off("updateUser", onUpdate);
-      };
-    });
-  }),
-  updateMember: protectedProcedure
-    .input(
-      z.object({
-        id: z.string(),
-        roles: z.array(z.string()).optional(),
-        nickname: z.string().optional(),
-        banner: z.string().optional(),
-        pfp: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const memberRoles = await ctx.prisma.member.findUnique({
-        where: { id: input.id },
-        select: { roles: true },
-      });
-      for (const role of memberRoles?.roles ?? []) {
-        await ctx.prisma.role.update({
-          where: { id: role.id },
-          data: { members: { disconnect: { id: input.id } } },
-        });
-      }
-      for (const roleId of input.roles ?? []) {
-        await ctx.prisma.role.update({
-          where: { id: roleId },
-          data: { members: { connect: { id: input.id } } },
-        });
-      }
-
-      const member = await ctx.prisma.member.update({
-        where: { id: input.id },
-        data: {
-          nickname: input.nickname,
-          banner: input.banner,
-          pfp: input.pfp,
-        },
-        include: {
-          roles: true,
-          mentionedIn: true,
-          messages: true,
-          user: true,
-          ownerOf: true,
-          server: true,
-          voiceChannel: true,
-        },
-      });
-      ee.emit("updateMember", member);
-      return member;
-    }),
-  onUpdateMember: protectedProcedure.subscription(() => {
-    return observable<Member>((emit) => {
-      const onUpdate = (data: Member) => emit.next(data);
-      ee.on("updateMember", onUpdate);
-      return () => {
-        ee.off("updateMember", onUpdate);
-      };
-    });
-  }),
-  leaveServer: protectedProcedure
-    .input(z.object({ memberId: z.string(), serverId: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      const member = await ctx.prisma.member.findUnique({
-        where: { id: input.memberId },
-      });
-      if (!member) throw new TRPCError({ code: "NOT_FOUND" });
-
-      const everyoneRole = await ctx.prisma.role.findFirst({
-        where: { serverid: input.serverId, name: "everyone" },
-      });
-      if (!everyoneRole) throw new TRPCError({ code: "NOT_FOUND" });
-      const update = await ctx.prisma.member.update({
-        where: {
-          id: input.memberId,
-        },
-        data: {
-          roles: {
-            disconnect: {
-              id: everyoneRole.id,
-            },
-          },
-        },
-      });
-      await ctx.prisma.member.delete({
-        where: { id: input.memberId },
-      });
-      ee.emit("leaveServer", update);
-      return update;
-    }),
-  onLeaveServer: protectedProcedure.subscription(() => {
-    return observable<Member>((emit) => {
-      const onJoin = (data: Member) => emit.next(data);
-      ee.on("leaveServer", onJoin);
-      return () => {
-        ee.off("leaveServer", onJoin);
-      };
-    });
-  }),
-  getUserById: protectedProcedure
+  createUserSettings: protectedProcedure
     .input(z.object({ userId: z.string() }))
-    .query(async ({ input, ctx }) => {
+    .mutation(async ({ ctx, input }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: input.userId },
         include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
           settings: true,
-          bannedon: true,
-          friends: {
-            include: {
-              member: true,
-              serverUserPosition: true,
-              adminuser: true,
-              settings: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-            },
-          },
-          friendsWith: true,
         },
       });
-      return user;
+      if (user?.settings) return user;
+      const update = await ctx.prisma.user.update({
+        where: {
+          id: input.userId,
+        },
+        data: {
+          settings: {
+            create: {
+              notifyBan: true,
+              notifyKick: true,
+              notifyUnban: true,
+              theme: "default",
+            },
+          },
+        },
+      });
+      return update;
     }),
-  getMemberById: protectedProcedure
-    .input(z.object({ memberId: z.string() }))
+  getUserById: protectedProcedure
+    .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const user = await ctx.prisma.member.findUnique({
-        where: { id: input.memberId },
-        include: {
-          actionType: true,
-          mentionedIn: true,
-          messages: true,
-          ownerOf: true,
-          roles: true,
-          server: true,
-          user: true,
-          voiceChannel: true,
-        },
-      });
-      return user;
-    }),
-  getMemberByUserId: protectedProcedure
-    .input(z.object({ userId: z.string(), serverId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const member = await ctx.prisma.member.findFirst({
-        where: {
-          serverId: input.serverId,
-          userId: input.userId,
-        },
-        include: {
-          actionType: true,
-          mentionedIn: true,
-          messages: true,
-          ownerOf: true,
-          roles: true,
-          server: true,
-          user: true,
-          voiceChannel: true,
-        },
-      });
-      if (!member) throw new TRPCError({ code: "NOT_FOUND" });
-      return member;
-    }),
-  getUserByMemberId: protectedProcedure
-    .input(z.object({ memberId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const member = await ctx.prisma.user.findFirst({
-        where: {
-          member: {
-            some: {
-              id: input.memberId,
-            },
-          },
-        },
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: input.id },
         include: {
           member: true,
           serverUserPosition: true,
@@ -268,8 +51,21 @@ export const userRouter = router({
           friendsWith: true,
         },
       });
-      if (!member) throw new TRPCError({ code: "NOT_FOUND" });
-      return member;
+      return user;
+    }),
+  getUserByMemberId: protectedProcedure
+    .input(z.object({ memberId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const user = await ctx.prisma.user.findFirst({
+        where: {
+          member: {
+            some: {
+              id: input.memberId,
+            },
+          },
+        },
+      });
+      return user;
     }),
   getFriendsByUserId: protectedProcedure
     .input(
@@ -296,17 +92,7 @@ export const userRouter = router({
           adminuser: true,
           settings: true,
           bannedon: true,
-          friends: {
-            include: {
-              member: true,
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              settings: true,
-              serverUserPosition: true,
-            },
-          },
+          friends: true,
           friendsWith: true,
         },
 
@@ -324,85 +110,6 @@ export const userRouter = router({
       }
       return { friends, nextCursor };
     }),
-  addFriend: protectedProcedure
-    .input(z.object({ target: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      // update target
-      const target = await ctx.prisma.user.update({
-        where: {
-          id: input.target,
-        },
-        data: {
-          friends: {
-            connect: {
-              id: ctx.session.user.id,
-            },
-          },
-        },
-        include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
-          settings: true,
-          bannedon: true,
-          friends: {
-            include: {
-              member: true,
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              settings: true,
-              serverUserPosition: true,
-            },
-          },
-          friendsWith: true,
-        },
-      });
-      // update self
-      const user = await ctx.prisma.user.update({
-        where: {
-          id: ctx.session.user.id,
-        },
-        data: {
-          friends: {
-            connect: {
-              id: input.target,
-            },
-          },
-        },
-        include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
-          settings: true,
-          bannedon: true,
-          friends: {
-            include: {
-              member: true,
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              settings: true,
-              serverUserPosition: true,
-            },
-          },
-          friendsWith: true,
-        },
-      });
-      ee.emit("addFriend", user, target);
-      return user.friends;
-    }),
-  onFriendAdd: protectedProcedure.subscription(() => {
-    return observable<User[]>((emit) => {
-      const onAdd = (data: User[]) => emit.next(data);
-      ee.on("addFriend", onAdd);
-      return () => {
-        ee.off("addFriend", onAdd);
-      };
-    });
-  }),
   searchUser: protectedProcedure
     .input(
       z.object({
@@ -448,12 +155,139 @@ export const userRouter = router({
       ee.emit("searchUpdate", users);
       return { users, nextCursor };
     }),
+  updateUser: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        image: z.string().optional(),
+        status: z.nativeEnum(OnlineStatus).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const update = await ctx.prisma.user.update({
+        where: {
+          id: input.id,
+        },
+        data: {
+          image: input.image,
+          name: input.name,
+          status: input.status,
+        },
+      });
+      ee.emit("updateUser", update);
+      return update;
+    }),
+  addFriend: protectedProcedure
+    .input(z.object({ target: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      // update target
+      const target = await ctx.prisma.user.update({
+        where: {
+          id: input.target,
+        },
+        data: {
+          friends: {
+            connect: {
+              id: ctx.session.user.id,
+            },
+          },
+        },
+        include: {
+          member: true,
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: true,
+          friendsWith: true,
+        },
+      });
+      // update self
+      const user = await ctx.prisma.user.update({
+        where: {
+          id: ctx.session.user.id,
+        },
+        data: {
+          friends: {
+            connect: {
+              id: input.target,
+            },
+          },
+        },
+        include: {
+          member: true,
+          serverUserPosition: true,
+          adminuser: true,
+          settings: true,
+          bannedon: true,
+          friends: true,
+          friendsWith: true,
+        },
+      });
+      ee.emit("addFriend", user, target);
+      return user.friends;
+    }),
+  updateSettings: protectedProcedure
+    .input(
+      z.object({
+        theme: z.string().optional(),
+        notifyBan: z.boolean().optional(),
+        notifyKick: z.boolean().optional(),
+        notifyUnban: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const user = await ctx.prisma.user.update({
+        where: {
+          id: ctx.session.user?.id,
+        },
+        data: {
+          settings: {
+            update: {
+              theme: input.theme,
+              notifyBan: input.notifyBan,
+              notifyKick: input.notifyKick,
+              notifyUnban: input.notifyUnban,
+            },
+          },
+        },
+      });
+      ee.emit("updateSettings", user);
+    }),
+  onUpdateSettings: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onUpdateSettings = (data: User) => emit.next(data);
+      ee.on("updateSettings", onUpdateSettings);
+      return () => {
+        ee.off("updateSettings", onUpdateSettings);
+      };
+    });
+  }),
   onUserSearchUpdate: protectedProcedure.subscription(() => {
     return observable<User[]>((emit) => {
       const onSearchUpdate = (data: User[]) => emit.next(data);
       ee.on("searchUpdate", onSearchUpdate);
       return () => {
         ee.off("searchUpdate", onSearchUpdate);
+      };
+    });
+  }),
+  onFriendAdd: protectedProcedure.subscription(() => {
+    return observable<User[]>((emit) => {
+      const onAdd = (data: User[]) => emit.next(data);
+      ee.on("addFriend", onAdd);
+      return () => {
+        ee.off("addFriend", onAdd);
+      };
+    });
+  }),
+  onUpdateUser: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onUpdate = (data: User) => emit.next(data);
+      ee.on("updateUser", onUpdate);
+      return () => {
+        ee.off("updateUser", onUpdate);
       };
     });
   }),

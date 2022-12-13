@@ -24,29 +24,6 @@ export const textChannelRouter = router({
       ee.emit("addChannel", channel);
       return channel;
     }),
-  onChannelCreate: protectedProcedure.subscription(() => {
-    return observable<TextChannel>((emit) => {
-      const onCreate = (data: TextChannel) => emit.next(data);
-      ee.on("addChannel", onCreate);
-      return () => {
-        ee.off("addChannel", onCreate);
-      };
-    });
-  }),
-  getChannelById: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const channel = await ctx.prisma.textChannel.findUnique({
-        where: {
-          id: input.id,
-        },
-        include: {
-          messages: true,
-          server: true,
-        },
-      });
-      return channel;
-    }),
   deleteChannel: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -72,15 +49,21 @@ export const textChannelRouter = router({
       ee.emit("deleteChannel", deleteChannel);
       return deleteChannel;
     }),
-  onChannelDelete: protectedProcedure.subscription(() => {
-    return observable<TextChannel>((emit) => {
-      const onDelete = (data: TextChannel) => emit.next(data);
-      ee.on("deleteChannel", onDelete);
-      return () => {
-        ee.off("deleteChannel", onDelete);
-      };
-    });
-  }),
+  getChannelById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const channel = await ctx.prisma.textChannel.findUnique({
+        where: {
+          id: input.id,
+        },
+        include: {
+          messages: true,
+          server: true,
+          category: true,
+        },
+      });
+      return channel;
+    }),
   getChannels: protectedProcedure
     .input(
       z.object({
@@ -118,4 +101,22 @@ export const textChannelRouter = router({
         nextCursor,
       };
     }),
+  onChannelCreate: protectedProcedure.subscription(() => {
+    return observable<TextChannel>((emit) => {
+      const onCreate = (data: TextChannel) => emit.next(data);
+      ee.on("addChannel", onCreate);
+      return () => {
+        ee.off("addChannel", onCreate);
+      };
+    });
+  }),
+  onChannelDelete: protectedProcedure.subscription(() => {
+    return observable<TextChannel>((emit) => {
+      const onDelete = (data: TextChannel) => emit.next(data);
+      ee.on("deleteChannel", onDelete);
+      return () => {
+        ee.off("deleteChannel", onDelete);
+      };
+    });
+  }),
 });

@@ -36,13 +36,7 @@ const Modal: FC<Props> = ({
   }, [open, setOpen]);
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      }}
-      className={styles.wrapper}
-    >
+    <div className={styles.wrapper}>
       {open && (
         <div
           // onBlur={() => setOpen(false)}

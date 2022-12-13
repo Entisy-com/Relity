@@ -20,3 +20,20 @@
     border-radius: 4px;
   }
 }
+.status_inner {
+  border-radius: 50px;
+  position: absolute;
+  translate: 35px calc(100vh - 15px);
+  width: 6px;
+  height: 6px;
+  z-index: 10001;
+}
+.status {
+  border-radius: 50px;
+  position: absolute;
+  translate: 33px calc(100vh - 17px);
+  width: 10px;
+  height: 10px;
+  z-index: 10000;
+  background-color: #373737;
+}

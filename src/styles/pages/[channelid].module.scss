@@ -3,33 +3,7 @@
   height: calc(100vh - 130px);
   overflow-y: scroll;
 }
-.message {
-  padding: 5px 0 5px 5px;
-  margin-block: 2px;
-  display: flex;
-  background-color: rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease-in-out;
-  cursor: pointer;
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.4);
-  }
-}
-.pfp {
-  position: relative;
-  top: 0;
-  border-radius: 4px;
-}
-.content {
-  padding-left: 5px;
-}
-.name {
-  font-weight: 800;
-  font-size: 14px;
-}
-.msg {
-  font-size: 12px;
-  word-break: keep-all;
-}
+
 .chat {
   position: absolute;
   width: calc(100% - 400px);

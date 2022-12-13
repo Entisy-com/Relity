@@ -3,8 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/serverList.module.scss";
 import Image from "next/image";
 import { trpc } from "../utils/trpc";
-import type { User } from "next-auth";
-import { CDN_API_URL, CDN_BASE_URL, LOGGER_URL } from "../utils/constants";
+import { CDN_UPLOAD_URL, CDN_BASE_URL, LOGGER_URL } from "../utils/constants";
 import axios from "axios";
 import {
   Modal,
@@ -18,111 +17,51 @@ import {
 import type { Server } from "../types";
 import { Droppable } from "react-beautiful-dnd";
 import ServerComp from "./Server";
+import { User } from "@prisma/client";
 
 type Props = {
-  user: User;
+  userid: string;
+  selectedServerId: string;
+  setSelectedServer: Function;
+  setServerOpen: Function;
+  setTextChannelOpen: Function;
+  serverOpen: boolean;
 };
 
-const ServerList: FC<Props> = ({ user }) => {
+const ServerList: FC<Props> = ({
+  userid,
+  setServerOpen,
+  serverOpen,
+  selectedServerId,
+  setTextChannelOpen,
+  setSelectedServer,
+}) => {
   const [createServerModalOpen, setCreateServerModalOpen] = useState(false);
   const [deleteServerModalOpen, setDeleteServerModalOpen] = useState(false);
   const [serverInfoModalOpen, setServerInfoModalOpen] = useState(false);
-  const [selectedServer, setSelectedServer] = useState<Server>();
 
-  const serverQuery = trpc.server.getServers.useInfiniteQuery(
-    { userid: user.id },
-    { getPreviousPageParam: (d) => d.nextCursor }
-  );
+  const { data: user } = trpc.user.getUserById.useQuery({
+    id: userid,
+  });
+
+  const { data: selectedServer } = trpc.server.getServerById.useQuery({
+    id: selectedServerId,
+  });
+
+  const { data: servers } = trpc.server.getServersByUserId.useQuery({
+    id: userid,
+  });
 
   const utils = trpc.useContext();
   const [isLoaded, setIsLoaded] = useState(false);
   const [serverName, setServerName] = useState("");
   const [serverImage, setServerImage] = useState("");
 
-  const { hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage } =
-    serverQuery;
-
   const [contextMenuOpen, setContextMenuOpen] = useState(false);
-  const [server, setServer] = useState(() => {
-    const servers = serverQuery.data?.pages.map((page) => page.servers).flat();
-    return servers ?? [];
-  });
-
-  const addServer = useCallback((incoming?: Server[]) => {
-    setServer((current) => {
-      const map: Record<Server["id"], Server> = {};
-      for (const serv of current ?? []) {
-        map[serv.id] = serv;
-      }
-      for (const serv of incoming ?? []) {
-        for (const m of serv.members ?? []) {
-          if (m.userId === user.id)
-            if (m.id === serv.ownerid) map[serv.id] = serv;
-        }
-      }
-      for (const serv of incoming ?? []) {
-        for (const m of serv.members ?? [])
-          if (m.userId === user.id) map[serv.id] = serv;
-      }
-
-      return Object.values(map);
-      // return Object.values(map).sort(
-      //   (a, b) =>
-      //     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      // );
-    });
-  }, []);
-  const removeServer = useCallback((incoming: Server) => {
-    setServer((current) => {
-      const map: Record<Server["id"], Server> = {};
-      for (const serv of current ?? []) {
-        if (serv.id !== incoming.id) map[serv.id] = serv;
-      }
-
-      return Object.values(map).sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    });
-  }, []);
-
-  useEffect(() => {
-    const servers = serverQuery.data?.pages.map((page) => page.servers).flat();
-    addServer(servers);
-  }, [serverQuery.data?.pages, addServer]);
 
   useEffect(() => {
     setIsLoaded(true);
   }, []);
-
-  trpc.server.onServerCreate.useSubscription(undefined, {
-    onData(server) {
-      addServer([server]);
-    },
-    onError(err) {
-      console.error("Subscription error:", err);
-      utils.server.getServers.invalidate();
-    },
-  });
-  trpc.server.onServerUpdate.useSubscription(undefined, {
-    onData(server) {
-      if (server.id === selectedServer?.id) setServerName(server.name);
-      setServerImage(serverImage);
-    },
-    onError(err) {
-      console.error("Subscription error:", err);
-      utils.server.getServerById.invalidate();
-    },
-  });
-  trpc.server.onServerDelete.useSubscription(undefined, {
-    onData(server) {
-      removeServer(server);
-    },
-    onError(err) {
-      console.error("Subscription error:", err);
-      utils.server.getServerById.invalidate();
-    },
-  });
 
   const createServer = trpc.server.createServer.useMutation();
   const deleteServer = trpc.server.deleteServer.useMutation();
@@ -163,11 +102,11 @@ const ServerList: FC<Props> = ({ user }) => {
     formData.append(file.name, file);
 
     const { data, status } = await axios.post(
-      `${CDN_API_URL}/upload`,
+      `${CDN_UPLOAD_URL}/server/pfp`,
       formData
     );
 
-    const pfp = `${CDN_BASE_URL}/${data.message[file.name].md5}.${
+    const pfp = `${CDN_BASE_URL}/server/pfp-${data.message[file.name].md5}.${
       data.message[file.name].name.split(".")[1]
     }`;
 
@@ -183,6 +122,8 @@ const ServerList: FC<Props> = ({ user }) => {
     });
   }
 
+  if (!user) return <></>;
+
   return (
     <>
       <div className={styles.wrapper}>
@@ -195,10 +136,13 @@ const ServerList: FC<Props> = ({ user }) => {
           >
             {(provided, snapshot) => (
               <div ref={provided.innerRef} {...provided.droppableProps}>
-                {(server ?? []).map((server, index) => (
+                {(servers ?? []).map((s, index) => (
                   <ServerComp
-                    key={server.id}
-                    server={server}
+                    setTextChannelOpen={setTextChannelOpen}
+                    serverOpen={serverOpen}
+                    setServerOpen={setServerOpen}
+                    key={s.id}
+                    server={s}
                     index={index}
                     user={user}
                     setSelectedServer={setSelectedServer}
@@ -257,9 +201,7 @@ const ServerList: FC<Props> = ({ user }) => {
         )}
 
         <ModalFileSelect
-          serverId={selectedServer?.id!}
-          value="Set Picture"
-          fileType=".png, .jpg, .jpeg"
+          fileType=".png, .jpg, .jpeg, .gif"
           onChange={(file) => {
             handleChangeImage(file);
           }}

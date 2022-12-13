@@ -4,13 +4,8 @@ import { useSession } from "next-auth/react";
 import type { FC } from "react";
 import { useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
-import type { Member, Server, TextChannel, User, VoiceChannel } from "../types";
-import {
-  BASE_URL,
-  CDN_API_URL,
-  CDN_BASE_URL,
-  LOGGER_URL,
-} from "../utils/constants";
+import type { Member, Server, TextChannel, VoiceChannel } from "../types";
+import { BASE_URL, CDN_UPLOAD_URL, CDN_BASE_URL } from "../utils/constants";
 import {
   handleKickMember,
   handleBanUser,
@@ -21,23 +16,39 @@ import {
 } from "../utils/handler";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
-import Modal from "./modal/Modal";
-import ModalButton from "./modal/ModalButton";
-import ModalFileSelect from "./modal/ModalFileSelect";
-import ModalImage from "./modal/ModalImage";
-import ModalInput from "./modal/ModalInput";
-import ModalText from "./modal/ModalText";
-import ModalTitle from "./modal/ModalTitle";
 import MemberList from "./MemberList";
+import {
+  Modal,
+  ModalButton,
+  ModalFileSelect,
+  ModalImage,
+  ModalInput,
+  ModalText,
+  ModalTitle,
+} from "./modal";
 
 type Props = {
-  server: Server;
+  serverid: string;
+  setSettingsOpen: Function;
+  setSelectedTextChannel: Function;
+  selectedTextChannelId: string;
+  setTextChannelOpen: Function;
 };
 
-const ServerInfo: FC<Props> = ({ server }) => {
+const ServerInfo: FC<Props> = ({
+  serverid,
+  setSettingsOpen,
+  selectedTextChannelId,
+  setSelectedTextChannel,
+  setTextChannelOpen,
+}) => {
   const { data: session } = useSession();
   const user = session?.user;
   const utils = trpc.useContext();
+
+  const { data: server } = trpc.server.getServerById.useQuery({
+    id: serverid,
+  });
 
   const [serverOptionsModalOpen, setServerOptionsModalOpen] = useState(false);
   const [serverMemberModalOpen, setServerMemberModalOpen] = useState(false);
@@ -55,7 +66,6 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const [serverName, setServerName] = useState("");
   const [serverImage, setServerImage] = useState("");
 
-  const [selectedTextChannel, setSelectedTextChannel] = useState<TextChannel>();
   const [selectedVoiceChannel, setSelectedVoiceChannel] =
     useState<VoiceChannel>();
   const [selectedMember, setSelectedMember] = useState<Member>();
@@ -66,7 +76,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const deleteServer = trpc.server.deleteServer.useMutation();
   const deleteTextChannel = trpc.textChannel.deleteChannel.useMutation();
   const deleteVoiceChannel = trpc.voiceChannel.deleteChannel.useMutation();
-  const leaveServer = trpc.user.leaveServer.useMutation();
+  const leaveServer = trpc.members.leaveServer.useMutation();
   const banUser = trpc.server.banUserFromServer.useMutation();
 
   const tcRef = useRef<HTMLInputElement>(null);
@@ -74,6 +84,11 @@ const ServerInfo: FC<Props> = ({ server }) => {
   const nameRef = useRef<HTMLInputElement>(null);
   const deleteRef = useRef<HTMLInputElement>(null);
   const repeatDeleteRef = useRef<HTMLInputElement>(null);
+
+  const { data: selectedTextChannel } =
+    trpc.textChannel.getChannelById.useQuery({
+      id: selectedTextChannelId,
+    });
 
   trpc.server.onServerUpdate.useSubscription(undefined, {
     onData(server) {
@@ -91,24 +106,24 @@ const ServerInfo: FC<Props> = ({ server }) => {
     formData.append(file.name, file);
 
     const { data, status } = await axios.post(
-      `${CDN_API_URL}/upload`,
+      `${CDN_UPLOAD_URL}/server/pfp`,
       formData
     );
 
-    const pfp = `${CDN_BASE_URL}/${data.message[file.name].md5}.${
+    const pfp = `${CDN_BASE_URL}/server/pfp-${data.message[file.name].md5}.${
       data.message[file.name].name.split(".")[1]
     }`;
 
     if (status === 200) {
       updateServer.mutate({
-        id: server.id,
+        id: server?.id ?? "",
         pfp: pfp,
       });
     }
     setServerImage(pfp);
   }
 
-  if (!user) return <></>;
+  if (!user || !server) return <></>;
 
   return (
     <>
@@ -130,6 +145,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           {serverName !== "" ? serverName : server.name}
         </p>
         <ChannelList
+          setTextChannelOpen={setTextChannelOpen}
           setSelectedTextChannel={setSelectedTextChannel}
           setSelectedVoiceChannel={setSelectedVoiceChannel}
           textChannelSettingsModalOpen={textChannelSettingsModalOpen}
@@ -142,7 +158,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
           setSelectedMember={setSelectedMember}
           memberInfoModalOpen={memberInfoModalOpen}
           setMemberInfoModalOpen={setMemberInfoModalOpen}
-          server={server}
+          serverid={serverid}
         />
       </div>
       <Modal
@@ -184,7 +200,10 @@ const ServerInfo: FC<Props> = ({ server }) => {
         />
         <ModalButton
           value="Settings"
-          onClick={() => (window.location.href = `/${server.id}/settings`)}
+          onClick={() => {
+            setSettingsOpen(true);
+            // window.location.href = `/${server.id}/settings`;
+          }}
         />
       </Modal>
       <Modal
@@ -299,7 +318,9 @@ const ServerInfo: FC<Props> = ({ server }) => {
         {selectedMember?.id === user.id ? (
           <ModalButton
             value="Settings"
-            onClick={() => (window.location.href = "/settings")}
+            onClick={() => {
+              window.location.href = "/settings";
+            }}
           />
         ) : (
           <></>
@@ -323,9 +344,7 @@ const ServerInfo: FC<Props> = ({ server }) => {
         )}
 
         <ModalFileSelect
-          serverId={server?.id!}
-          value="Set Picture"
-          fileType=".png, .jpg, .jpeg"
+          fileType=".png, .jpg, .jpeg, .gif"
           onChange={(file) => {
             handleChangeImage(file);
           }}

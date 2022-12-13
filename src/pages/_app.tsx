@@ -1,15 +1,12 @@
 import { type AppType } from "next/app";
 import { type Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
-import { resetServerContext } from "react-beautiful-dnd";
 
 import { trpc } from "../utils/trpc";
 
 import "../styles/globals.scss";
 import { useEffect } from "react";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
-import { AppContextType } from "next/dist/shared/lib/utils";
-import { NextRouter } from "next/router";
 
 const MyApp: AppType<{ session: Session | null }> = ({
   Component,
@@ -39,10 +36,6 @@ const MyApp: AppType<{ session: Session | null }> = ({
         oldPosition,
         serverId: draggableId.split("#")[2]!,
       });
-      // updateRolePosition.mutate({
-      //   roleid: draggableId.replace("role#", "").split("#")[0]!,
-      //   position,
-      // });
     }
   };
 

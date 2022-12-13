@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-function */
-/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import type { Server } from "@prisma/client";
 import type { GetServerSidePropsContext, NextPage } from "next";
 import { useSession } from "next-auth/react";
@@ -11,7 +8,6 @@ import ModalTitle from "../../components/modal/ModalTitle";
 import { trpc } from "../../utils/trpc";
 import { isServerAThing, isServerMember } from "../api/v1/getServer";
 import styles from "../../styles/pages/invite.module.scss";
-import { getServerAuthSession } from "../../server/common/get-server-auth-session";
 
 type Props = {
   server: Server;
@@ -20,12 +16,13 @@ type Props = {
 const Invite: NextPage<Props> = ({ server }) => {
   const session = useSession();
   const user = session.data?.user;
-  const joinMutation = trpc.user.joinServer.useMutation();
+  const joinMutation = trpc.members.joinServer.useMutation();
 
   function joinServer() {
     const serverId = server.id;
     const userId = user?.id!;
-    joinMutation.mutate({ serverId, userId });
+    const roleId = server.everyoneRole;
+    joinMutation.mutate({ serverId, userId, roleId });
     window.location.href = `/${serverId}`;
   }
 
@@ -34,7 +31,7 @@ const Invite: NextPage<Props> = ({ server }) => {
   });
 
   const { data: allUser } = trpc.user.getUserById.useQuery({
-    userId: user?.id ?? "",
+    id: user?.id ?? "",
   });
 
   if (!allData || !allUser) return <></>;

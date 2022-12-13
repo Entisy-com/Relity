@@ -13,7 +13,6 @@ app.use(
       "http://localhost:3001",
       "http://localhost:4000",
       "http://localhost:4200",
-      "http://localhost:4300",
       "http://localhost:5672",
     ],
     methods: "POST, GET",
@@ -25,10 +24,6 @@ app.use(express.urlencoded());
 
 app.get("/", (req, res) => {});
 
-app.get("/heartbeat", (req, res) => {
-  return res.sendStatus(200);
-});
-
 app.post("/log", (req, res) => {
   if (!req.body) return res.status(400).json({ error: "No Body Provided" });
   const message = req.body.message;
@@ -39,4 +34,4 @@ app.post("/log", (req, res) => {
 });
 
 // Heart = Heartbeat & Log Server
-app.listen(PORT, () => console.log(`Heart running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Log Server running on port ${PORT}`));

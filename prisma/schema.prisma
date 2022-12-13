@@ -2,13 +2,6 @@ generator client {
     provider = "prisma-client-js"
 }
 
-generator zod {
-    provider          = "prisma-zod-generator"
-    output            = "./zod"
-    isGenerateSelect  = false
-    isGenerateInclude = false
-}
-
 datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
@@ -74,6 +67,7 @@ model Message {
     textChannel      TextChannel @relation(fields: [textChannelId], references: [id])
     mentionedRoles   Role[]      @relation("MessageToRole")
     mentionedMembers Member[]    @relation("mentions")
+    edited           Boolean     @default(false)
 }
 
 model Role {
@@ -108,8 +102,8 @@ model Server {
     updatedAt          DateTime             @updatedAt
     createdAt          DateTime             @default(now())
     serverUserPosition ServerUserPosition[] @relation("serverUserPosition")
-    settings           ServerSettings       @relation("serverSettings", fields: [serverSettingsId], references: [id])
-    serverSettingsId   String               @unique
+    settings           ServerSettings?      @relation("serverSettings")
+    everyoneRole       String
 }
 
 model Account {
@@ -197,18 +191,22 @@ model ActionType {
 }
 
 model UserSettings {
-    id          String  @id @default(uuid())
-    userid      String  @unique
-    user        User    @relation(fields: [userid], references: [id])
-    notifyUnban Boolean @default(true)
-    notifyBan   Boolean @default(true)
-    notifyKick  Boolean @default(true)
+    id          String       @id @default(uuid())
+    userid      String       @unique
+    user        User         @relation(fields: [userid], references: [id])
+    notifyUnban Boolean      @default(true)
+    notifyBan   Boolean      @default(true)
+    notifyKick  Boolean      @default(true)
+    theme       String       @default("default")
+    statusText  String       @default("")
+    status      OnlineStatus @default(ONLINE)
 }
 
 model ServerSettings {
-    id                String  @id @default(uuid())
-    serverid          String? @unique
-    server            Server? @relation("serverSettings")
+    id       String @id @default(uuid())
+    server   Server @relation("serverSettings", fields: [serverId], references: [id])
+    serverId String @unique
+
     logRoleUpdates    Boolean
     logMemberUpdates  Boolean
     logChannelUpdates Boolean
@@ -221,7 +219,9 @@ model ServerSettings {
     notifyBan   Boolean
     notifyKick  Boolean
 
-    showBadges Boolean
+    displayBadges         Boolean
+    displayRoleColors     Boolean
+    displayOfflineMembers Boolean
 }
 
 model ServerUserPosition {
@@ -262,11 +262,11 @@ enum OnlineStatus {
 }
 
 enum Action {
-    // default
+    // #region default
     MESSAGE_DELETE
     BAN_USER
     KICK_USER
-    // default
+    // #endregion default
 
     MESSAGE_EDIT
     MESSAGE_SEND

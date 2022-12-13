@@ -32,9 +32,7 @@ const ModalDropdown: FC<Props> = ({
   const [value, setValue] = useState<Option>(
     defaultValue ?? { label: null, value: null }
   );
-  const [values, setValues] = useState<Option[]>(
-    defaultValues ?? [{ label: null, value: null }]
-  );
+  const [values, setValues] = useState<Option[]>(defaultValues ?? []);
   const [highlighted, setHighlighted] = useState(options![0]);
 
   useEffect(() => {

@@ -1,14 +1,18 @@
+import { User } from "@prisma/client";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/friendList.module.scss";
-import { User } from "../types";
 import { trpc } from "../utils/trpc";
 import { Modal, ModalInput, ModalList, ModalTitle } from "./modal";
 
 type Props = {
-  user: User;
+  userid: string;
 };
 
-const FriendList: FC<Props> = ({ user }) => {
+const FriendList: FC<Props> = ({ userid }) => {
+  const { data: user } = trpc.user.getUserById.useQuery({
+    id: userid,
+  });
+
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchUpdated, setSearchUpdated] = useState(false);
 
@@ -19,7 +23,7 @@ const FriendList: FC<Props> = ({ user }) => {
   const addFriendMutation = trpc.user.addFriend.useMutation();
 
   const friendsQuery = trpc.user.getFriendsByUserId.useInfiniteQuery(
-    { userId: user.id },
+    { userId: userid },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
 
@@ -110,6 +114,8 @@ const FriendList: FC<Props> = ({ user }) => {
     });
   }
 
+  if (!user) return <></>;
+
   return (
     <>
       <div className={styles.wrapper}>
@@ -127,7 +133,7 @@ const FriendList: FC<Props> = ({ user }) => {
             Add Friend
           </p>
         </div>
-        {(user?.friends ?? []).map((friend) => (
+        {(user.friends ?? []).map((friend) => (
           <div key={friend.id} className={styles.friend}>
             <p>{friend.name}</p>
           </div>

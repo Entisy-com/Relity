@@ -1,9 +1,5 @@
-.wrapper {
-  width: 100%;
-  height: 100vh;
-}
-
 .modal {
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,11 +9,9 @@
   box-shadow: 0 0 10px 2px black;
   padding: 12px;
   border-radius: 4px;
-  position: absolute;
-  top: 50%;
   left: 50%;
+  top: 50%;
   translate: -50% -50%;
-  z-index: 999;
 }
 
 .blur {
@@ -322,4 +316,5 @@
   outline: none;
   background: transparent;
   cursor: pointer;
+  z-index: 200;
 }

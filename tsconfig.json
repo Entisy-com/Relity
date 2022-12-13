@@ -25,7 +25,8 @@
     "tsconfig.server.json",
     "src/fileserver/server.js",
     "src/middleware/filesPayLoadExists.js",
-    "src/middleware/index.ts"
+    "src/middleware/index.ts",
+    "src/logserver/server.js"
   ],
   "exclude": ["node_modules"]
 }

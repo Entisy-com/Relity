@@ -2,12 +2,54 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import type { ActionType, Member, Server, User } from "../../../types";
+import type { ActionType, Server, User } from "../../../types";
 import { TRPCError } from "@trpc/server";
-import { Action } from "@prisma/client";
-import type { Prisma } from "@prisma/client";
+import { Action, Prisma } from "@prisma/client";
 
 const ee = new EventEmitter();
+
+export const defaultInclude = Prisma.validator<Prisma.ServerInclude>()({
+  settings: true,
+  textchannel: true,
+  bannedUser: true,
+  categories: true,
+  owner: true,
+  roles: {
+    include: {
+      members: true,
+    },
+  },
+  voicechannel: {
+    include: {
+      category: true,
+      members: {
+        include: {
+          user: true,
+        },
+      },
+      server: true,
+    },
+  },
+  actionLog: {
+    include: {
+      actions: true,
+      server: true,
+    },
+  },
+  members: {
+    include: {
+      user: true,
+      actionType: true,
+      mentionedIn: true,
+      messages: true,
+      ownerOf: true,
+      roles: true,
+      server: true,
+      voiceChannel: true,
+    },
+  },
+  serverUserPosition: true,
+});
 
 export const serverRouter = router({
   createServer: protectedProcedure
@@ -15,6 +57,7 @@ export const serverRouter = router({
     .mutation(async ({ input, ctx }) => {
       const server = await ctx.prisma.server.create({
         data: {
+          everyoneRole: "",
           name: input.name,
           owner: {
             create: {
@@ -37,8 +80,8 @@ export const serverRouter = router({
           },
           roles: {
             create: {
-              name: "Member",
-              visible: true,
+              name: "everyone",
+              visible: false,
               color: "#ffffff",
               permissions: ["READ_MESSAGES", "SEND_MESSAGES"],
             },
@@ -63,7 +106,9 @@ export const serverRouter = router({
               notifyBan: true,
               notifyKick: true,
               notifyUnban: true,
-              showBadges: true,
+              displayBadges: true,
+              displayRoleColors: true,
+              displayOfflineMembers: true,
             },
           },
         },
@@ -76,10 +121,10 @@ export const serverRouter = router({
           roles: true,
         },
       });
-      const memberRole = await ctx.prisma.role.findFirst({
+      const everyoneRole = await ctx.prisma.role.findFirst({
         where: {
           serverid: server.id,
-          name: "Member",
+          name: "everyone",
         },
       });
       await ctx.prisma.member.update({
@@ -89,7 +134,7 @@ export const serverRouter = router({
         data: {
           roles: {
             connect: {
-              id: memberRole!.id,
+              id: everyoneRole!.id,
             },
           },
         },
@@ -102,85 +147,18 @@ export const serverRouter = router({
               id: server.owner.id,
             },
           },
+          everyoneRole: everyoneRole?.id,
         },
         include: {
-          textchannel: {
-            include: {
-              category: true,
-              messages: true,
-              server: true,
-            },
-          },
-          bannedUser: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              member: true,
-              settings: true,
-            },
-          },
-          categories: {
-            include: {
-              server: true,
-              textchannels: true,
-              voicechannels: true,
-            },
-          },
-          owner: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          roles: {
-            include: {
-              members: {
-                include: {
-                  user: true,
-                },
-              },
-              mentionedIn: true,
-              server: true,
-            },
-          },
-          voicechannel: {
-            include: {
-              category: true,
-              members: true,
-              server: true,
-            },
-          },
-          actionLog: {
-            include: {
-              actions: true,
-              server: true,
-            },
-          },
-          members: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          settings: {
-            include: {
-              server: true,
-            },
-          },
+          textchannel: true,
+          bannedUser: true,
+          categories: true,
+          owner: true,
+          roles: true,
+          voicechannel: true,
+          actionLog: true,
+          members: true,
+          settings: true,
           serverUserPosition: true,
         },
       });
@@ -218,83 +196,15 @@ export const serverRouter = router({
           id: input.id,
         },
         include: {
-          settings: {
-            include: {
-              server: true,
-            },
-          },
-          textchannel: {
-            include: {
-              category: true,
-              messages: true,
-              server: true,
-            },
-          },
-          bannedUser: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              member: true,
-              settings: true,
-            },
-          },
-          categories: {
-            include: {
-              server: true,
-              textchannels: true,
-              voicechannels: true,
-            },
-          },
-          owner: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          roles: {
-            include: {
-              members: {
-                include: {
-                  user: true,
-                },
-              },
-              mentionedIn: true,
-              server: true,
-            },
-          },
-          voicechannel: {
-            include: {
-              category: true,
-              members: true,
-              server: true,
-            },
-          },
-          actionLog: {
-            include: {
-              actions: true,
-              server: true,
-            },
-          },
-          members: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
+          textchannel: true,
+          bannedUser: true,
+          categories: true,
+          owner: true,
+          roles: true,
+          voicechannel: true,
+          actionLog: true,
+          members: true,
+          settings: true,
           serverUserPosition: true,
         },
       });
@@ -311,6 +221,12 @@ export const serverRouter = router({
             id: channel.id,
           },
         });
+      });
+      //Delete ServerSettings
+      await ctx.prisma.serverSettings.delete({
+        where: {
+          serverId: server.id,
+        },
       });
       // Deletes all VoiceChannel
       await ctx.prisma.voiceChannel.deleteMany({
@@ -340,11 +256,6 @@ export const serverRouter = router({
           id: serverUserPosition?.id,
         },
       });
-      await ctx.prisma.serverSettings.delete({
-        where: {
-          serverid: server.id,
-        },
-      });
       const deleteServer = await ctx.prisma.server.delete({
         where: {
           id: input.id,
@@ -353,33 +264,6 @@ export const serverRouter = router({
       ee.emit("deleteServer", deleteServer);
       return deleteServer;
     }),
-  onServerDelete: protectedProcedure.subscription(() => {
-    return observable<Server>((emit) => {
-      const onDelete = (data: Server) => emit.next(data);
-      ee.on("deleteServer", onDelete);
-      return () => {
-        ee.off("deleteServer", onDelete);
-      };
-    });
-  }),
-  onServerUpdate: protectedProcedure.subscription(() => {
-    return observable<Server>((emit) => {
-      const onDelete = (data: Server) => emit.next(data);
-      ee.on("updateServer", onDelete);
-      return () => {
-        ee.off("updateServer", onDelete);
-      };
-    });
-  }),
-  onServerCreate: protectedProcedure.subscription(() => {
-    return observable<Server>((emit) => {
-      const onCreate = (data: Server) => emit.next(data);
-      ee.on("addServer", onCreate);
-      return () => {
-        ee.off("addServer", onCreate);
-      };
-    });
-  }),
   getServerById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
@@ -387,87 +271,7 @@ export const serverRouter = router({
         where: {
           id: input.id,
         },
-        include: {
-          settings: {
-            include: {
-              server: true,
-            },
-          },
-          textchannel: {
-            include: {
-              category: true,
-              messages: true,
-              server: true,
-            },
-          },
-          bannedUser: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              member: true,
-              settings: true,
-            },
-          },
-          categories: {
-            include: {
-              server: true,
-              textchannels: true,
-              voicechannels: true,
-            },
-          },
-          owner: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          roles: {
-            include: {
-              members: {
-                include: {
-                  user: true,
-                },
-              },
-              mentionedIn: true,
-              server: true,
-            },
-          },
-          voicechannel: {
-            include: {
-              category: true,
-              members: true,
-              server: true,
-            },
-          },
-          actionLog: {
-            include: {
-              actions: true,
-              server: true,
-            },
-          },
-          members: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-
-          serverUserPosition: true,
-        },
+        include: defaultInclude,
       });
       return server;
     }),
@@ -483,86 +287,7 @@ export const serverRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const servers = await ctx.prisma.server.findMany({
-        include: {
-          settings: {
-            include: {
-              server: true,
-            },
-          },
-          textchannel: {
-            include: {
-              category: true,
-              messages: true,
-              server: true,
-            },
-          },
-          bannedUser: {
-            include: {
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              member: true,
-              settings: true,
-            },
-          },
-          categories: {
-            include: {
-              server: true,
-              textchannels: true,
-              voicechannels: true,
-            },
-          },
-          owner: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          roles: {
-            include: {
-              members: {
-                include: {
-                  user: true,
-                },
-              },
-              mentionedIn: true,
-              server: true,
-            },
-          },
-          voicechannel: {
-            include: {
-              category: true,
-              members: true,
-              server: true,
-            },
-          },
-          actionLog: {
-            include: {
-              actions: true,
-              server: true,
-            },
-          },
-          members: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          serverUserPosition: true,
-        },
+        include: defaultInclude,
         take: limit + 1,
         where: { members: { some: { userId: input.userid } } },
         cursor: cursor
@@ -583,80 +308,20 @@ export const serverRouter = router({
         nextCursor,
       };
     }),
-  addActionToActionLog: protectedProcedure
-    .input(
-      z.object({
-        serverid: z.string(),
-        action: z.nativeEnum(Action),
-        memberId: z.string(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const update = await ctx.prisma.actionType.create({
-        data: {
-          action: input.action,
-          actionlog: {
-            connectOrCreate: {
-              where: {
-                serverId: input.serverid,
-              },
-              create: {
-                server: {
-                  connect: {
-                    id: input.serverid,
-                  },
-                },
-              },
-            },
-          },
-          member: {
-            connect: {
-              id: input.memberId,
-            },
-          },
-        },
-      });
-      ee.emit("updatedLog", update);
-      return update;
-    }),
-  onAddActionToActionLog: protectedProcedure.subscription(() => {
-    return observable<ActionType>((emit) => {
-      const onCreate = (data: ActionType) => emit.next(data);
-      ee.on("updatedLog", onCreate);
-      return () => {
-        ee.off("updatedLog", onCreate);
-      };
-    });
-  }),
-  getActionLogFromServer: protectedProcedure
-    .input(z.object({ serverId: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const log = await ctx.prisma.actionLog.findFirst({
+  getServersByUserId: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const servers = await ctx.prisma.server.findMany({
         where: {
-          serverId: input.serverId,
-        },
-        include: {
-          actions: {
-            include: {
-              member: {
-                include: {
-                  actionType: true,
-                  mentionedIn: true,
-                  messages: true,
-                  server: true,
-                  ownerOf: true,
-                  roles: true,
-                  user: true,
-                  voiceChannel: true,
-                },
-              },
-              actionlog: true,
+          members: {
+            some: {
+              userId: input.id,
             },
           },
-          server: true,
         },
+        include: defaultInclude,
       });
-      return log;
+      return servers;
     }),
   switchServer: protectedProcedure
     .input(
@@ -700,6 +365,7 @@ export const serverRouter = router({
           },
         },
       });
+      ee.emit("updateSettings", update);
     }),
   banUserFromServer: protectedProcedure
     .input(
@@ -730,15 +396,6 @@ export const serverRouter = router({
       });
       ee.emit("bannedUser", update);
     }),
-  onBanUser: protectedProcedure.subscription(() => {
-    return observable<User>((emit) => {
-      const onCreate = (data: User) => emit.next(data);
-      ee.on("bannedUser", onCreate);
-      return () => {
-        ee.off("bannedUser", onCreate);
-      };
-    });
-  }),
   pardonUserFromServer: protectedProcedure
     .input(z.object({ userId: z.string(), serverId: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -757,6 +414,93 @@ export const serverRouter = router({
       });
       ee.emit("unbannedUser", update);
     }),
+  updateSetting: protectedProcedure
+    .input(
+      z.object({
+        serverId: z.string(),
+        logChannelUpdates: z.boolean().optional(),
+        logJoinLeave: z.boolean().optional(),
+        logMemberUpdates: z.boolean().optional(),
+        logMessages: z.boolean().optional(),
+        logMessageUpdates: z.boolean().optional(),
+        logRoleUpdates: z.boolean().optional(),
+        notifyBan: z.boolean().optional(),
+        notifyUnban: z.boolean().optional(),
+        notifyKick: z.boolean().optional(),
+        displayBadges: z.boolean().optional(),
+        displayRoleColors: z.boolean().optional(),
+        displayOfflineMembers: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const update = await ctx.prisma.server.update({
+        where: { id: input.serverId },
+        data: {
+          settings: {
+            update: {
+              logChannelUpdates: input.logChannelUpdates,
+              logJoinLeave: input.logJoinLeave,
+              logMemberUpdates: input.logMemberUpdates,
+              logMessages: input.logMessages,
+              logMessageUpdates: input.logMessageUpdates,
+              logRoleUpdates: input.logRoleUpdates,
+              notifyBan: input.notifyBan,
+              notifyUnban: input.notifyUnban,
+              notifyKick: input.notifyKick,
+              displayBadges: input.displayBadges,
+              displayRoleColors: input.displayRoleColors,
+              displayOfflineMembers: input.displayOfflineMembers,
+            },
+          },
+        },
+      });
+      return update;
+    }),
+  onServerDelete: protectedProcedure.subscription(() => {
+    return observable<Server>((emit) => {
+      const onDelete = (data: Server) => emit.next(data);
+      ee.on("deleteServer", onDelete);
+      return () => {
+        ee.off("deleteServer", onDelete);
+      };
+    });
+  }),
+  onServerUpdate: protectedProcedure.subscription(() => {
+    return observable<Server>((emit) => {
+      const onDelete = (data: Server) => emit.next(data);
+      ee.on("updateServer", onDelete);
+      return () => {
+        ee.off("updateServer", onDelete);
+      };
+    });
+  }),
+  onServerCreate: protectedProcedure.subscription(() => {
+    return observable<Server>((emit) => {
+      const onCreate = (data: Server) => emit.next(data);
+      ee.on("addServer", onCreate);
+      return () => {
+        ee.off("addServer", onCreate);
+      };
+    });
+  }),
+  onSwitchServer: protectedProcedure.subscription(() => {
+    return observable<Server[]>((emit) => {
+      const onCreate = (data: Server[]) => emit.next(data);
+      ee.on("updateSettings", onCreate);
+      return () => {
+        ee.off("updateSettings", onCreate);
+      };
+    });
+  }),
+  onBanUser: protectedProcedure.subscription(() => {
+    return observable<User>((emit) => {
+      const onCreate = (data: User) => emit.next(data);
+      ee.on("bannedUser", onCreate);
+      return () => {
+        ee.off("bannedUser", onCreate);
+      };
+    });
+  }),
   onUnbanUser: protectedProcedure.subscription(() => {
     return observable<User>((emit) => {
       const onCreate = (data: User) => emit.next(data);

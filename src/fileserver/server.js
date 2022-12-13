@@ -28,10 +28,10 @@ app.use(
 app.get("/", (req, res) => {});
 
 app.post(
-  "/upload",
+  "/server/pfp",
   fileUpload({ createParentPath: true }),
   filesPayloadExists,
-  fileExtLimiter([".png", ".jpg", "jpeg"]),
+  fileExtLimiter([".png", ".jpg", "jpeg", ".gif"]),
   fileSizeLimiter,
   (req, res) => {
     const files = req.files;
@@ -40,7 +40,8 @@ app.post(
       const filePath = path.join(
         __dirname,
         "cdn",
-        `${files[key].md5}.${files[key].name.split(".")[1]}`
+        "server",
+        `pfp-${files[key].md5}.${files[key].name.split(".")[1]}`
       );
       files[key].mv(filePath, (err) => {
         if (err) return res.status(500).json({ status: 500, message: err });
@@ -51,4 +52,108 @@ app.post(
   }
 );
 
-app.listen(PORT, () => console.log(`CDN Server running on port ${PORT}`));
+app.post(
+  "/user/pfp",
+  fileUpload({ createParentPath: true }),
+  filesPayloadExists,
+  fileExtLimiter([".png", ".jpg", "jpeg", ".gif"]),
+  fileSizeLimiter,
+  (req, res) => {
+    const files = req.files;
+
+    Object.keys(files).forEach((key) => {
+      const filePath = path.join(
+        __dirname,
+        "cdn",
+        "user",
+        `pfp-${files[key].md5}.${files[key].name.split(".")[1]}`
+      );
+      files[key].mv(filePath, (err) => {
+        if (err) return res.status(500).json({ status: 500, message: err });
+      });
+    });
+
+    return res.status(200).json({ status: 200, message: files });
+  }
+);
+
+app.post(
+  "/server/banner",
+  fileUpload({ createParentPath: true }),
+  filesPayloadExists,
+  fileExtLimiter([".png", ".jpg", "jpeg", ".gif"]),
+  fileSizeLimiter,
+  (req, res) => {
+    const files = req.files;
+
+    Object.keys(files).forEach((key) => {
+      const filePath = path.join(
+        __dirname,
+        "cdn",
+        "server",
+        `banner-${files[key].md5}.${files[key].name.split(".")[1]}`
+      );
+      files[key].mv(filePath, (err) => {
+        if (err) return res.status(500).json({ status: 500, message: err });
+      });
+    });
+
+    return res.status(200).json({ status: 200, message: files });
+  }
+);
+
+app.post(
+  "/server/pfp",
+  fileUpload({ createParentPath: true }),
+  filesPayloadExists,
+  fileExtLimiter([".png", ".jpg", "jpeg", ".gif"]),
+  fileSizeLimiter,
+  (req, res) => {
+    const files = req.files;
+
+    Object.keys(files).forEach((key) => {
+      const filePath = path.join(
+        __dirname,
+        "cdn",
+        "server",
+        `pfp-${files[key].md5}.${files[key].name.split(".")[1]}`
+      );
+      files[key].mv(filePath, (err) => {
+        if (err) return res.status(500).json({ status: 500, message: err });
+      });
+    });
+
+    return res.status(200).json({ status: 200, message: files });
+  }
+);
+
+app.post(
+  "/theme",
+  fileUpload({ createParentPath: true }),
+  filesPayloadExists,
+  fileExtLimiter([".css"]),
+  fileSizeLimiter,
+  (req, res) => {
+    const files = req.files;
+
+    Object.keys(files).forEach((key) => {
+      const filePath = path.join(
+        __dirname,
+        "cdn",
+        "themes",
+        `theme-${files[key].md5}.${files[key].name.split(".")[1]}`
+      );
+      files[key].mv(filePath, (err) => {
+        if (err) return res.status(500).json({ status: 500, message: err });
+      });
+    });
+
+    return res.status(200).json({ status: 200, message: files });
+  }
+);
+
+app.listen(PORT, () =>
+  console.log(
+    `CDN Server running on port ${PORT} routes: [/user/pfp (ext: [.png, .jpg, .jpeg]), /user/banner (ext: [.png, .jpg, .jpeg]), /server/pfp (ext: [.png, .jpg, .jpeg]), /server/banner (ext: [.png, .jpg, .jpeg]), /theme (ext: [.css, .scss, .sass])]`
+  )
+);

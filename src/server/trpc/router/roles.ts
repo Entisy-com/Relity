@@ -46,15 +46,6 @@ export const rolesRouter = router({
       ee.emit("createRole", role);
       return role;
     }),
-  onRoleCreate: protectedProcedure.subscription(() => {
-    return observable<Role>((emit) => {
-      const onCreate = (data: Role) => emit.next(data);
-      ee.on("createRole", onCreate);
-      return () => {
-        ee.off("createRole", onCreate);
-      };
-    });
-  }),
   updateRole: protectedProcedure
     .input(
       z.object({
@@ -80,15 +71,6 @@ export const rolesRouter = router({
       ee.emit("updateRole", update);
       return update;
     }),
-  onRoleUpdate: protectedProcedure.subscription(() => {
-    return observable<Role>((emit) => {
-      const onUpdate = (data: Role) => emit.next(data);
-      ee.on("updateRole", onUpdate);
-      return () => {
-        ee.off("updateRole", onUpdate);
-      };
-    });
-  }),
   deleteRole: protectedProcedure
     .input(z.object({ roleid: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -96,7 +78,23 @@ export const rolesRouter = router({
         where: { id: input.roleid },
         include: { members: true },
       });
-      role?.members.forEach(async (member) => {
+      if (!role) throw new TRPCError({ code: "NOT_FOUND" });
+      const pos = role.position;
+      const roles = await ctx.prisma.role.findMany({
+        where: {
+          position: {
+            gt: pos,
+          },
+        },
+      });
+      for (const r of roles) {
+        await ctx.prisma.role.updateMany({
+          data: {
+            position: r.position - 1,
+          },
+        });
+      }
+      role.members.forEach(async (member) => {
         await ctx.prisma.role.update({
           where: { id: input.roleid },
           data: {
@@ -113,15 +111,32 @@ export const rolesRouter = router({
       });
       ee.emit("deleteRole", deletedRole);
     }),
-  onRoleDelete: protectedProcedure.subscription(() => {
-    return observable<Role>((emit) => {
-      const onDelete = (data: Role) => emit.next(data);
-      ee.on("deleteRole", onDelete);
-      return () => {
-        ee.off("deleteRole", onDelete);
-      };
-    });
-  }),
+  getRolesByServerId: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const roles = await ctx.prisma.role.findMany({
+        where: {
+          serverid: input.id,
+        },
+        include: {
+          members: {
+            include: {
+              actionType: true,
+              mentionedIn: true,
+              messages: true,
+              ownerOf: true,
+              roles: true,
+              server: true,
+              user: true,
+              voiceChannel: true,
+            },
+          },
+          mentionedIn: true,
+          server: true,
+        },
+      });
+      return roles;
+    }),
   switchRole: protectedProcedure
     .input(
       z.object({
@@ -131,7 +146,6 @@ export const rolesRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      console.table(input);
       const updatedRoles = [] as Role[];
       if (input.position < input.oldPosition) {
         //Nach Oben
@@ -148,17 +162,8 @@ export const rolesRouter = router({
             position: input.position,
           },
           include: {
-            members: {
-              include: {
-                roles: true,
-                user: true,
-              },
-            },
-            server: {
-              include: {
-                members: true,
-              },
-            },
+            members: true,
+            server: true,
             mentionedIn: true,
           },
         });
@@ -176,17 +181,8 @@ export const rolesRouter = router({
               position: i,
             },
             include: {
-              members: {
-                include: {
-                  roles: true,
-                  user: true,
-                },
-              },
-              server: {
-                include: {
-                  members: true,
-                },
-              },
+              members: true,
+              server: true,
               mentionedIn: true,
             },
           });
@@ -208,17 +204,8 @@ export const rolesRouter = router({
             position: input.position,
           },
           include: {
-            members: {
-              include: {
-                roles: true,
-                user: true,
-              },
-            },
-            server: {
-              include: {
-                members: true,
-              },
-            },
+            members: true,
+            server: true,
             mentionedIn: true,
           },
         });
@@ -236,17 +223,8 @@ export const rolesRouter = router({
               position: i,
             },
             include: {
-              members: {
-                include: {
-                  roles: true,
-                  user: true,
-                },
-              },
-              server: {
-                include: {
-                  members: true,
-                },
-              },
+              members: true,
+              server: true,
               mentionedIn: true,
             },
           });
@@ -282,17 +260,8 @@ export const rolesRouter = router({
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: { position: "desc" },
         include: {
-          members: {
-            include: {
-              roles: true,
-              user: true,
-            },
-          },
-          server: {
-            include: {
-              members: true,
-            },
-          },
+          members: true,
+          server: true,
           mentionedIn: true,
         },
       });
@@ -306,4 +275,31 @@ export const rolesRouter = router({
         nextCursor,
       };
     }),
+  onRoleUpdate: protectedProcedure.subscription(() => {
+    return observable<Role>((emit) => {
+      const onUpdate = (data: Role) => emit.next(data);
+      ee.on("updateRole", onUpdate);
+      return () => {
+        ee.off("updateRole", onUpdate);
+      };
+    });
+  }),
+  onRoleCreate: protectedProcedure.subscription(() => {
+    return observable<Role>((emit) => {
+      const onCreate = (data: Role) => emit.next(data);
+      ee.on("createRole", onCreate);
+      return () => {
+        ee.off("createRole", onCreate);
+      };
+    });
+  }),
+  onRoleDelete: protectedProcedure.subscription(() => {
+    return observable<Role>((emit) => {
+      const onDelete = (data: Role) => emit.next(data);
+      ee.on("deleteRole", onDelete);
+      return () => {
+        ee.off("deleteRole", onDelete);
+      };
+    });
+  }),
 });

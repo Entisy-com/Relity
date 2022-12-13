@@ -2,7 +2,7 @@ import { FC } from "react";
 import { Draggable } from "react-beautiful-dnd";
 import styles from "../styles/components/serverList.module.scss";
 import { User } from "next-auth";
-import { Server } from "../types";
+import { Server } from "@prisma/client";
 
 type Props = {
   server: Server;
@@ -12,9 +12,14 @@ type Props = {
   setServerInfoModalOpen: Function;
   serverImage: string;
   serverName: string;
+  serverOpen: boolean;
+  setServerOpen: Function;
+  setTextChannelOpen: Function;
 };
 
 const ServerComp: FC<Props> = ({
+  serverOpen,
+  setServerOpen,
   setSelectedServer,
   setServerInfoModalOpen,
   serverImage,
@@ -22,6 +27,7 @@ const ServerComp: FC<Props> = ({
   user,
   server,
   index,
+  setTextChannelOpen,
 }) => {
   function isOwner(server: Server) {
     for (const member of server.members) {
@@ -31,11 +37,12 @@ const ServerComp: FC<Props> = ({
     }
     return false;
   }
+
   return (
     <Draggable
       index={index}
-      draggableId={`server#${server.id}`}
-      key={server.id}
+      draggableId={`server#${server?.id ?? ""}`}
+      key={server?.id ?? ""}
     >
       {(provided, snapshot) => (
         <div
@@ -47,9 +54,11 @@ const ServerComp: FC<Props> = ({
             key={server.id}
             className={styles.server}
             onClick={(e) => {
-              window.location.href = `/${server.id}`;
+              // window.location.href = `/${server.id}`;
               e.preventDefault();
-              setSelectedServer(server);
+              if (setTextChannelOpen) setTextChannelOpen(false);
+              if (setServerOpen) setServerOpen(true);
+              if (setSelectedServer) setSelectedServer(server);
             }}
             onContextMenu={(e) => {
               if (isOwner(server)) {
@@ -71,36 +80,7 @@ const ServerComp: FC<Props> = ({
               <></>
             )}
             <div className={styles.logo}>
-              {serverImage !== "" ? (
-                <>
-                  {serverImage.endsWith(".gif") ? (
-                    <>
-                      <img
-                        className={styles.a_pfp}
-                        src={serverImage}
-                        alt=""
-                        width={40}
-                        height={40}
-                      />
-                      <img
-                        className={styles.pfp}
-                        src={serverImage.replace(".gif", ".png")}
-                        alt=""
-                        width={40}
-                        height={40}
-                      />
-                    </>
-                  ) : (
-                    <img
-                      className={styles.pfp}
-                      src={serverImage}
-                      alt=""
-                      width={40}
-                      height={40}
-                    />
-                  )}
-                </>
-              ) : server.pfp ? (
+              {server.pfp ? (
                 <>
                   {server.pfp.endsWith(".gif") ? (
                     <>

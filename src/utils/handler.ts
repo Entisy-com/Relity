@@ -87,6 +87,7 @@ export function handleDeleteServer(
   axios.post(`${LOGGER_URL}`, {
     message: `Deleted Server "${server?.name}", ID: ${server?.id!}`,
   });
+  window.location.href = "/";
 }
 
 export function isOwner(userId: string, server: Server) {

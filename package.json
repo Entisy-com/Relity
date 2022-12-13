@@ -6,8 +6,7 @@
     "cdn:http": "cd ./src/fileserver/cdn && http-server -p 4200 --cors",
     "cdn:start": "node ./src/fileserver/server.js",
     "cdn:dev": "nodemon ./src/fileserver/server.js",
-    "heart:start": "node ./src/logserver/server.js",
-    "heart:dev": "nodemon ./src/logserver/server.js",
+    "log:start": "node ./src/logserver/server.js",
     "db:migrate": "npx prisma migrate dev",
     "db:start": "docker compose up -d",
     "db:push": "npx prisma db push",
@@ -49,10 +48,13 @@
     "superjson": "1.9.1",
     "tsx": "^3.12.1",
     "ws": "^8.11.0",
+    "ws-heartbeats": "^1.0.0",
     "zod": "^3.19.1"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.0",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.14",
     "@types/node": "^18.0.0",
     "@types/react": "^18.0.14",
     "@types/react-beautiful-dnd": "^13.1.2",

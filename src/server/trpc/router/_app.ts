@@ -6,7 +6,8 @@ import {
   userRouter,
   voiceChannelRouter,
   rolesRouter,
-  serverSettingsRouter,
+  memberRouter,
+  actionlogRouter,
 } from "./";
 
 export const appRouter = router({
@@ -16,7 +17,8 @@ export const appRouter = router({
   message: messageRouter,
   user: userRouter,
   roles: rolesRouter,
-  serverSettings: serverSettingsRouter,
+  members: memberRouter,
+  actionLog: actionlogRouter,
 });
 
 // export type definition of API

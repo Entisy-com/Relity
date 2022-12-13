@@ -6,38 +6,47 @@
 html,
 body {
   --primary-color: rgb(40, 40, 40);
-  padding: 0;
-  margin: 0;
-  font-family: "Dosis";
-  font-weight: 500;
+  --bg: url("/background.svg");
+  --primary-color: #faebd7;
+  --scroll-thumb: #828282;
+  --scroll-bar: #252525;
+  --primary-font: "Dosis";
+  --user-select: none;
+
   background-color: var(--primary-color);
-  color: #faebd7;
-  user-select: none;
-  scroll-behavior: smooth;
+  font-family: var(--primary-font);
+  user-select: var(--user-select);
+  color: var(--primary-color);
+
   scroll-margin-bottom: 200px;
+  scroll-behavior: smooth;
   overflow: hidden;
+  font-weight: 500;
 }
 * {
+  font-family: var(--primary-font);
+  font-weight: 500;
   padding: 0;
   margin: 0;
-  font-family: "Dosis";
-  font-weight: 500;
 }
 
 #__next {
+  background-image: var(--bg);
+
+  background-size: cover;
   height: 100vh;
   width: 100%;
-  background-image: url("/background.svg");
-  background-size: cover;
 }
 
 ::-webkit-scrollbar {
+  background-color: var(--scroll-bar);
+
   height: 6px;
   width: 6px;
-  background-color: #252525;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #828282;
+  background-color: var(--scroll-thumb);
+
   border-radius: 50px;
 }
