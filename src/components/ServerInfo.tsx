@@ -1,10 +1,10 @@
-import { Permission } from "@prisma/client";
+import { Permission, Role } from "@prisma/client";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import type { FC } from "react";
 import { useRef, useState } from "react";
 import styles from "../styles/components/serverInfo.module.scss";
-import type { Member, Server, TextChannel, VoiceChannel } from "../types";
+import type { Member, VoiceChannel } from "../types";
 import { BASE_URL, CDN_UPLOAD_URL, CDN_BASE_URL } from "../utils/constants";
 import {
   handleKickMember,
@@ -13,6 +13,7 @@ import {
   handleDeleteTextChannel,
   hasPermission,
   handleDeleteServer,
+  isOwner,
 } from "../utils/handler";
 import { trpc } from "../utils/trpc";
 import ChannelList from "./ChannelList";
@@ -21,6 +22,7 @@ import {
   Modal,
   ModalButton,
   ModalFileSelect,
+  ModalHistory,
   ModalImage,
   ModalInput,
   ModalText,
@@ -90,6 +92,15 @@ const ServerInfo: FC<Props> = ({
       id: selectedTextChannelId,
     });
 
+  const { data: roles } = trpc.roles.getRolesByServerId.useQuery({
+    id: serverid,
+  });
+
+  const { data: selfMember } = trpc.members.getMemberByUserId.useQuery({
+    serverId: serverid,
+    userId: user?.id ?? "",
+  });
+
   trpc.server.onServerUpdate.useSubscription(undefined, {
     onData(server) {
       setServerName(server.name);
@@ -123,7 +134,42 @@ const ServerInfo: FC<Props> = ({
     setServerImage(pfp);
   }
 
-  if (!user || !server) return <></>;
+  function getHighestRole(member: Member) {
+    let col = [];
+    for (const sr of roles ?? []) {
+      for (const mr of member.roles ?? []) {
+        if (sr.id === mr.id) {
+          col.push(sr);
+        }
+      }
+    }
+
+    return col[0];
+  }
+
+  function getHighestRolePermission(role: Role) {
+    let col = [];
+    const permissions = [
+      Permission.MANAGE_SERVER,
+      Permission.MANAGE_MEMBERS,
+      Permission.BAN_MEMBERS,
+      Permission.KICK_MEMBERS,
+      Permission.MANAGE_MESSAGES,
+      Permission.SEND_MESSAGES,
+      Permission.READ_MESSAGES,
+    ];
+    for (const sp of permissions ?? []) {
+      for (const rp of role.permissions ?? []) {
+        if (sp === rp) {
+          col.push(sp);
+        }
+      }
+    }
+
+    return col[0];
+  }
+
+  if (!user || !server || !selfMember) return <></>;
 
   return (
     <>
@@ -286,6 +332,26 @@ const ServerInfo: FC<Props> = ({
               ? `Email: ${selectedMember.user.email}`
               : ""
           }
+        />
+        <ModalText value="Roles" />
+        <ModalHistory
+          badges
+          items={(selectedMember?.roles ?? []).map((role) => {
+            return {
+              label: role.name,
+              value: role.id,
+              // W.I.P
+              // clearable:
+              //   (hasPermission(
+              //     selfMember?.userId,
+              //     server,
+              //     Permission.MANAGE_MEMBERS
+              //   ) ||
+              //     isOwner(selectedMember?.userId ?? "", server)) &&
+              //   getHighestRolePermission(getHighestRole(selectedMember!)!) ===
+              //     getHighestRolePermission(getHighestRole(selectedMember!)!),
+            };
+          })}
         />
         {hasPermission(user.id, server, Permission.KICK_MEMBERS) &&
         selectedMember?.userId !== user.id &&

@@ -12,18 +12,17 @@ import {
   ModalInput,
   ModalTitle,
 } from "../components/modal";
-import { Role, User, Permission } from "@prisma/client";
+import { Permission } from "@prisma/client";
 import { Action } from "@prisma/client";
-import type { ActionLog, Member, Server } from "../types";
+import type { ActionLog, Member } from "../types";
 import { PermissionOptions } from "../types";
 import type { ActionType } from "@prisma/client";
 import Head from "next/head";
 import { BASE_URL, LOGGER_URL } from "../utils/constants";
-import { User as AuthUser } from "next-auth";
 import axios from "axios";
 import { Draggable, Droppable } from "react-beautiful-dnd";
 import { handleDeleteServer, handleUnbanUser } from "../utils/handler";
-import { Role as RoleTypes } from "../types";
+import { User, Role } from "@prisma/client";
 
 type Props = {
   serverid: string;
@@ -83,6 +82,8 @@ const ServerSettings: NextPage<Props> = ({
   const updateSettings = trpc.server.updateSetting.useMutation();
   const updateServer = trpc.server.updateServer.useMutation();
   const deleteServer = trpc.server.deleteServer.useMutation();
+
+  const createInviteMutation = trpc.invite.createInvite.useMutation();
 
   const updateMember = trpc.members.updateMember.useMutation();
 
@@ -216,9 +217,18 @@ const ServerSettings: NextPage<Props> = ({
     );
   };
 
-  const sortUsers = (a: User, b: User) => {
-    return a.name.localeCompare(b.name);
-  };
+  const { data: members } = trpc.members.getMembersByServerId.useQuery({
+    id: serverid,
+  });
+
+  const { data: bannedUsers } = trpc.server.getBannedUsers.useQuery({
+    id: serverid,
+  });
+
+  const { data: roles } = trpc.roles.getRolesByServerId.useQuery({
+    id: serverid,
+  });
+
   const sortRoles = (a: Role, b: Role) => {
     return a.position.toString().localeCompare(b.position.toString());
   };
@@ -245,45 +255,12 @@ const ServerSettings: NextPage<Props> = ({
     return ret;
   }
 
-  const utils = trpc.useContext();
-
-  const rolesQuery = trpc.roles.getRoles.useInfiniteQuery(
-    { serverId: server.id },
-    { getPreviousPageParam: (d) => d.nextCursor }
-  );
-
-  const [serverRoles, setServerRoles] = useState(() => {
-    const roles = rolesQuery.data?.pages.map((page) => page.roles).flat();
-    return roles ?? [];
-  });
-
-  const addServerRoles = useCallback((incoming?: RoleTypes[]) => {
-    setServerRoles((current) => {
-      const map: Record<RoleTypes["id"], RoleTypes> = {};
-      for (const role of current ?? []) {
-        map[role.id] = role;
-      }
-      for (const role of incoming ?? []) {
-        map[role.id] = role;
-      }
-
-      return Object.values(map);
+  function createInvite() {
+    createInviteMutation.mutate({
+      serverid,
+      uses: -1,
     });
-  }, []);
-
-  useEffect(() => {
-    const roles = rolesQuery.data?.pages.map((page) => page.roles).flat();
-    addServerRoles(roles);
-  }, [rolesQuery.data?.pages, addServerRoles]);
-
-  trpc.roles.onRoleUpdate.useSubscription(undefined, {
-    onData(roles) {
-      addServerRoles([roles]);
-    },
-    onError(err) {
-      console.error("Subscription error:", err);
-    },
-  });
+  }
 
   return (
     <>
@@ -314,11 +291,7 @@ const ServerSettings: NextPage<Props> = ({
               <p id={styles.gap} />
               <p
                 className={styles.option_category}
-                onClick={() => {
-                  navigator.clipboard.writeText(
-                    `${BASE_URL}/${server.id}/invite`
-                  );
-                }}
+                onClick={() => createInvite()}
               >
                 {" "}
                 Copy Invite Link
@@ -477,7 +450,7 @@ const ServerSettings: NextPage<Props> = ({
                 >
                   {(provided) => (
                     <div {...provided.droppableProps} ref={provided.innerRef}>
-                      {server.roles.sort(sortRoles).map((role, index) => (
+                      {(roles ?? []).sort(sortRoles).map((role, index) => (
                         <Draggable
                           draggableId={`role#${role.id}#${server.id}`}
                           index={index}
@@ -517,16 +490,16 @@ const ServerSettings: NextPage<Props> = ({
           <div id="member" className={styles.option}>
             <h1 className={styles.option_title}>Member</h1>
             <div className={serverStyles.members}>
-              {server.members.sort(sortMembers).map((user) => (
+              {(members ?? []).sort(sortMembers).map((member) => (
                 <p
                   className={serverStyles.member}
                   onClick={() => {
-                    setSelectedMember(user);
+                    setSelectedMember(member);
                     setEditMemberModalOpen(true);
                   }}
-                  key={user.id}
+                  key={member.id}
                 >
-                  {user.nickname ?? user.user?.name}
+                  {member.nickname ?? member.user?.name}
                 </p>
               ))}
             </div>
@@ -557,18 +530,20 @@ const ServerSettings: NextPage<Props> = ({
           <div id="banned_user" className={styles.option}>
             <h1 className={styles.option_title}>Banned User</h1>
             <div className={serverStyles.member}>
-              {server.bannedUser.sort(sortUsers).map((user) => (
-                <p
-                  className={serverStyles.member}
-                  key={user.id}
-                  onClick={() => {
-                    setSelectedBannedUser(user);
-                    setBannedUserInfoModalOpen(true);
-                  }}
-                >
-                  {user.name}
-                </p>
-              ))}
+              {(bannedUsers ?? [])
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((user) => (
+                  <p
+                    className={serverStyles.member}
+                    key={user.id}
+                    onClick={() => {
+                      setSelectedBannedUser(user);
+                      setBannedUserInfoModalOpen(true);
+                    }}
+                  >
+                    {user.name}
+                  </p>
+                ))}
             </div>
           </div>
           <div id="developer" className={styles.option}>

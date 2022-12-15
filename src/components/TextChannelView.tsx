@@ -1,6 +1,6 @@
 import { useSession } from "next-auth/react";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
-import { Message, Server, TextChannel } from "../types";
+import { Member, Message, Server, TextChannel } from "../types";
 import { trpc } from "../utils/trpc";
 import { Modal, ModalButton, ModalText, ModalTitle } from "./modal";
 import styles from "../styles/pages/[channelid].module.scss";
@@ -26,6 +26,10 @@ const TextChannelView: FC<Props> = ({ serverid, channelid }) => {
     id: serverid,
   });
 
+  const { data: roles } = trpc.roles.getRolesByServerId.useQuery({
+    id: serverid,
+  });
+
   const { data: channel } = trpc.textChannel.getChannelById.useQuery({
     id: channelid,
   });
@@ -38,6 +42,19 @@ const TextChannelView: FC<Props> = ({ serverid, channelid }) => {
     userId: user?.id!,
     serverId: serverid,
   });
+
+  function getHighestRoleColor(member: Member) {
+    let col = [];
+    for (const sr of roles ?? []) {
+      for (const mr of member.roles ?? []) {
+        if (sr.id === mr.id) {
+          col.push(sr.color);
+        }
+      }
+    }
+
+    return server?.settings?.displayRoleColors ? col[0] : undefined;
+  }
 
   function handleSendMessage(e: any) {
     e.preventDefault();
@@ -109,6 +126,11 @@ const TextChannelView: FC<Props> = ({ serverid, channelid }) => {
               {messages.map((msg) => {
                 return (
                   <MessageComp
+                    color={
+                      server.settings?.displayRoleColors
+                        ? getHighestRoleColor(msg.author) ?? "#ffffff"
+                        : "#ffffff"
+                    }
                     content={msg.content}
                     image={msg.author?.pfp ?? msg.author?.user?.image}
                     name={msg.author?.nickname ?? msg.author?.user?.name}

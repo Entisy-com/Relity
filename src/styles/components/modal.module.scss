@@ -186,6 +186,63 @@
   background-color: rgb(0, 176, 0);
 }
 
+.history_container {
+  left: 50%;
+  translate: -50% 0;
+  position: relative;
+  width: 282px;
+  min-height: 1.5em;
+  border: 0.05em solid #777;
+  display: flex;
+  align-items: center;
+  padding: 0.5em;
+  border-radius: 0.25em;
+  outline: none;
+  flex-grow: 1;
+  flex-wrap: wrap;
+  overflow-y: auto;
+  max-height: 10em;
+}
+
+.history_badge {
+  display: flex;
+  align-items: center;
+  border: 0.05em solid #777;
+  border-radius: 0.25em;
+  padding: 0.15em 0.25em;
+  gap: 0.25em;
+  background: none;
+  color: white;
+  outline: none;
+}
+
+.history_item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  border-radius: 0.25em;
+  padding: 0.15em 0.25em;
+  gap: 0.25em;
+  background: none;
+  color: white;
+}
+
+.history_extras {
+  display: flex;
+  position: absolute;
+  right: 12px;
+  gap: 0.3em;
+}
+
+.history_extra {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50px;
+  cursor: pointer;
+}
+
 .dropdown_container {
   left: 50%;
   translate: -50% 0;
@@ -317,4 +374,8 @@
   background: transparent;
   cursor: pointer;
   z-index: 200;
+}
+
+#gap {
+  gap: 0.5em;
 }

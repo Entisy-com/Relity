@@ -4,7 +4,7 @@ import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
 import { TRPCError } from "@trpc/server";
 import { Permission } from "@prisma/client";
-import type { Role } from "../../../types";
+import { defaultRoleInclude, Role } from "../../../types";
 
 const ee = new EventEmitter();
 
@@ -118,22 +118,7 @@ export const rolesRouter = router({
         where: {
           serverid: input.id,
         },
-        include: {
-          members: {
-            include: {
-              actionType: true,
-              mentionedIn: true,
-              messages: true,
-              ownerOf: true,
-              roles: true,
-              server: true,
-              user: true,
-              voiceChannel: true,
-            },
-          },
-          mentionedIn: true,
-          server: true,
-        },
+        include: defaultRoleInclude,
       });
       return roles;
     }),
@@ -161,11 +146,7 @@ export const rolesRouter = router({
           data: {
             position: input.position,
           },
-          include: {
-            members: true,
-            server: true,
-            mentionedIn: true,
-          },
+          include: defaultRoleInclude,
         });
         updatedRoles.push(update);
         for (let i = input.oldPosition; i > input.position; i--) {
@@ -180,11 +161,7 @@ export const rolesRouter = router({
             data: {
               position: i,
             },
-            include: {
-              members: true,
-              server: true,
-              mentionedIn: true,
-            },
+            include: defaultRoleInclude,
           });
           updatedRoles.push(update);
         }
@@ -203,11 +180,7 @@ export const rolesRouter = router({
           data: {
             position: input.position,
           },
-          include: {
-            members: true,
-            server: true,
-            mentionedIn: true,
-          },
+          include: defaultRoleInclude,
         });
         updatedRoles.push(update); //+1
         for (let i = input.oldPosition; i < input.position; i++) {
@@ -222,11 +195,7 @@ export const rolesRouter = router({
             data: {
               position: i,
             },
-            include: {
-              members: true,
-              server: true,
-              mentionedIn: true,
-            },
+            include: defaultRoleInclude,
           });
           updatedRoles.push(update);
         }
@@ -259,11 +228,7 @@ export const rolesRouter = router({
         where: { server: { id: input.serverId } },
         cursor: cursor ? { id: cursor } : undefined,
         orderBy: { position: "desc" },
-        include: {
-          members: true,
-          server: true,
-          mentionedIn: true,
-        },
+        include: defaultRoleInclude,
       });
       let nextCursor: typeof cursor | undefined = undefined;
       if (roles.length > limit) {

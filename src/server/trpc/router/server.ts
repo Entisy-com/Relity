@@ -49,6 +49,7 @@ export const defaultInclude = Prisma.validator<Prisma.ServerInclude>()({
     },
   },
   serverUserPosition: true,
+  invites: true,
 });
 
 export const serverRouter = router({
@@ -455,6 +456,21 @@ export const serverRouter = router({
         },
       });
       return update;
+    }),
+  getBannedUsers: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const users = await ctx.prisma.user.findMany({
+        where: {
+          bannedon: {
+            some: {
+              id: input.id,
+            },
+          },
+        },
+        include: defaultInclude,
+      });
+      return users;
     }),
   onServerDelete: protectedProcedure.subscription(() => {
     return observable<Server>((emit) => {

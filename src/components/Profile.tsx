@@ -24,27 +24,43 @@ const Profile: FC<Props> = ({
   setServerOpen,
 }) => {
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState<OnlineStatus>();
+
   const utils = trpc.useContext();
 
-  const [user, setUser] = useState<User>();
+  const userQuery = trpc.user.getUsers.useInfiniteQuery(
+    { userid },
+    { getPreviousPageParam: (d) => d.nextCursor }
+  );
 
-  const { data: userr } = trpc.user.getUserById.useQuery({
-    id: userid,
+  const [user, setUser] = useState<User | undefined>(() => {
+    return userQuery.data?.pages.map((page) => page.users).flat()[0];
+  });
+
+  useEffect(() => {
+    const users = userQuery.data?.pages.map((page) => page.users).flat();
+    setUser(users ? users[0] : undefined);
+  }, [userQuery.data?.pages]);
+
+  trpc.user.onUpdateUser.useSubscription(undefined, {
+    onData(newUser) {
+      newUser.id === userid &&
+        newUser.status !== user?.status &&
+        setUser(newUser);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+      utils.user.getUsers.invalidate();
+    },
   });
 
   trpc.user.onUpdateUser.useSubscription(undefined, {
     onData(user) {
-      setUser(user);
+      user.id === userid && setUser(user);
     },
     onError(err) {
       console.error("Subscription error:", err);
     },
   });
-
-  useEffect(() => {
-    setUser(userr!);
-  }, [userr]);
 
   function getStatusColor() {
     return user?.status === OnlineStatus.ONLINE
@@ -56,7 +72,7 @@ const Profile: FC<Props> = ({
       : "transparent";
   }
 
-  if (!userr) return <></>;
+  if (!user) return <></>;
 
   return (
     <>

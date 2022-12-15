@@ -1,7 +1,10 @@
-import { User } from "@prisma/client";
+import { NotificationType, OnlineStatus } from "@prisma/client";
 import { FC, useCallback, useEffect, useRef, useState } from "react";
 import styles from "../styles/components/friendList.module.scss";
+import { FriendRequest, User } from "../types";
+import { Heart } from "../utils/heart";
 import { trpc } from "../utils/trpc";
+import FriendComp from "./Friend";
 import { Modal, ModalInput, ModalList, ModalTitle } from "./modal";
 
 type Props = {
@@ -14,13 +17,14 @@ const FriendList: FC<Props> = ({ userid }) => {
   });
 
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [searchUpdated, setSearchUpdated] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
 
   const utils = trpc.useContext();
 
-  const addFriendMutation = trpc.user.addFriend.useMutation();
+  const sendFriendRequestMutation =
+    trpc.friendRequest.sendFriendRequest.useMutation();
+  const removeFriendMutation = trpc.user.removeFriend.useMutation();
 
   const friendsQuery = trpc.user.getFriendsByUserId.useInfiniteQuery(
     { userId: userid },
@@ -29,37 +33,22 @@ const FriendList: FC<Props> = ({ userid }) => {
 
   const usersQuery = trpc.user.searchUser.useInfiniteQuery(
     {
+      id: userid,
       name: nameRef.current?.value.trim().length ? nameRef.current?.value : "",
     },
     { getPreviousPageParam: (d) => d.nextCursor }
   );
 
-  const [users, setUsers] = useState(() => {
-    const users = usersQuery.data?.pages.map((page) => page.users).flat();
-    return users ?? [];
+  const [users, setUsers] = useState<User[]>(() => {
+    return usersQuery.data?.pages.map((page) => page.users).flat() ?? [];
   });
 
-  const [friends, setFriends] = useState(() => {
-    const friends = friendsQuery.data?.pages.map((page) => page.friends).flat();
-    return friends ?? [];
+  const [friends, setFriends] = useState<User[]>(() => {
+    return friendsQuery.data?.pages.map((page) => page.friends).flat() ?? [];
   });
 
   const addFriends = useCallback((incoming?: User[]) => {
     setFriends((current) => {
-      const map: Record<User["id"], User> = {};
-      for (const f of current ?? []) {
-        map[f.id] = f;
-      }
-      for (const f of incoming ?? []) {
-        map[f.id] = f;
-      }
-
-      return Object.values(map);
-    });
-  }, []);
-
-  const addUsers = useCallback((incoming?: User[]) => {
-    setUsers((current) => {
       const map: Record<User["id"], User> = {};
       for (const f of current ?? []) {
         map[f.id] = f;
@@ -78,10 +67,14 @@ const FriendList: FC<Props> = ({ userid }) => {
   }, [friendsQuery.data?.pages, addFriends]);
 
   useEffect(() => {
+    utils.user.searchUser.invalidate();
+    setUsers([]);
+  }, [nameRef.current?.value]);
+
+  useEffect(() => {
     const u = usersQuery.data?.pages.map((page) => page.users).flat();
-    addUsers(u);
-    setSearchUpdated(false);
-  }, [usersQuery.data?.pages, addUsers, searchUpdated, setSearchUpdated]);
+    setUsers(u ?? []);
+  }, [usersQuery.data?.pages, setUsers]);
 
   trpc.user.onFriendAdd.useSubscription(undefined, {
     onData(user) {
@@ -94,8 +87,8 @@ const FriendList: FC<Props> = ({ userid }) => {
   });
 
   trpc.user.onUserSearchUpdate.useSubscription(undefined, {
-    onData(user) {
-      addUsers(user);
+    onData(data) {
+      if (data.id === userid) setUsers(data.users);
     },
     onError(err) {
       console.error("Subscription error:", err);
@@ -103,15 +96,34 @@ const FriendList: FC<Props> = ({ userid }) => {
     },
   });
 
-  function searchName() {
-    if (!nameRef.current) return;
-    if (!(nameRef.current.value.trim().length > 0)) return;
-  }
-
-  function addFriend(id: string) {
-    addFriendMutation.mutate({
+  function removeFriend(id: string) {
+    removeFriendMutation.mutate({
       target: id,
     });
+  }
+
+  function sendFriendRequest(targetId: string) {
+    setSearchModalOpen(false);
+    nameRef.current!.value = "";
+    sendFriendRequestMutation.mutate({
+      target: targetId,
+    });
+  }
+
+  function isFriend(id: string) {
+    for (const friend of friends) {
+      if (friend.id === id) return true;
+    }
+    return false;
+  }
+
+  let onlineFriends = [];
+  let offlineFriends = [];
+
+  for (const friend of friends) {
+    friend.status === OnlineStatus.OFFLINE
+      ? offlineFriends.push(friend)
+      : onlineFriends.push(friend);
   }
 
   if (!user) return <></>;
@@ -122,22 +134,50 @@ const FriendList: FC<Props> = ({ userid }) => {
         <div className={styles.add_friend}>
           <p
             style={{
-              backgroundColor: "rgba(0, 0, 0, 0.3)",
+              backgroundColor: "rgba(0, 0, 0, 0.2)",
               height: 30,
               display: "grid",
               placeItems: "center",
               cursor: "pointer",
+              marginBottom: "5px",
             }}
             onClick={() => setSearchModalOpen(true)}
           >
             Add Friend
           </p>
         </div>
-        {(user.friends ?? []).map((friend) => (
-          <div key={friend.id} className={styles.friend}>
-            <p>{friend.name}</p>
-          </div>
-        ))}
+        {onlineFriends.length > 0 ? (
+          <p className={styles.title}>Online</p>
+        ) : (
+          <></>
+        )}
+        {onlineFriends.length > 0 &&
+          (onlineFriends ?? []).map((friend) => {
+            return (
+              <FriendComp
+                key={friend.id}
+                image={friend.image}
+                name={friend.name}
+                status={friend.status}
+              />
+            );
+          })}
+        {offlineFriends.length > 0 ? (
+          <p className={styles.title}>Offline</p>
+        ) : (
+          <></>
+        )}
+        {offlineFriends.length > 0 &&
+          (offlineFriends ?? []).map((friend) => {
+            return (
+              <FriendComp
+                key={friend.id}
+                image={friend.image}
+                name={friend.name}
+                status={friend.status}
+              />
+            );
+          })}
       </div>
       <Modal
         open={searchModalOpen}
@@ -152,17 +192,37 @@ const FriendList: FC<Props> = ({ userid }) => {
           focus
           placeholder="Name"
           rref={nameRef}
-          onKeyUp={(key) => setSearchUpdated(true)}
+          onClear={() => utils.user.searchUser.invalidate()}
+          onKeyUp={(event) => {
+            if (
+              event.code === "ShiftLeft" ||
+              event.code === "ShiftRight" ||
+              event.code === "AltRight" ||
+              event.code === "AltLeft" ||
+              event.code === "ControlRight" ||
+              event.code === "ControlLeft" ||
+              event.key === "Enter" ||
+              event.key === "Delete" ||
+              event.key === "CapsLock"
+            )
+              return;
+            utils.user.searchUser.invalidate();
+            setUsers([]);
+          }}
         />
-        {users.length ? (
+        {users?.length ? (
           <ModalList
             undecorated
             outline
             clickable
             items={users.map((u) => {
-              return { label: u.name, value: u.id };
+              return u
+                ? u.id !== userid && !isFriend(u.id)
+                  ? { label: u.name, value: u.id }
+                  : { label: null, value: null }
+                : { label: null, value: null };
             })}
-            onClick={(button, item) => addFriend(item.value)}
+            onClick={(button, item) => sendFriendRequest(item.value)}
           />
         ) : (
           <></>

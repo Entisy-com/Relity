@@ -8,7 +8,10 @@ import {
   rolesRouter,
   memberRouter,
   actionlogRouter,
+  friendRequestRouter,
+  inviteRouter,
 } from "./";
+import { notificationRouter } from "./notification";
 
 export const appRouter = router({
   server: serverRouter,
@@ -19,6 +22,9 @@ export const appRouter = router({
   roles: rolesRouter,
   members: memberRouter,
   actionLog: actionlogRouter,
+  friendRequest: friendRequestRouter,
+  notification: notificationRouter,
+  invite: inviteRouter,
 });
 
 // export type definition of API

@@ -2,11 +2,24 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
 import { observable } from "@trpc/server/observable";
-import type { ActionType, Member, Server, User } from "../../../types";
+import { defaultRoleInclude, Member } from "../../../types";
 import { TRPCError } from "@trpc/server";
-import { Action } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 const ee = new EventEmitter();
+
+export const defaultInclude = Prisma.validator<Prisma.MemberInclude>()({
+  actionType: true,
+  voiceChannel: true,
+  mentionedIn: true,
+  messages: true,
+  ownerOf: true,
+  roles: {
+    include: defaultRoleInclude,
+  },
+  server: true,
+  user: true,
+});
 
 export const memberRouter = router({
   getMemberById: protectedProcedure
@@ -14,16 +27,7 @@ export const memberRouter = router({
     .query(async ({ input, ctx }) => {
       const user = await ctx.prisma.member.findUnique({
         where: { id: input.memberId },
-        include: {
-          actionType: true,
-          mentionedIn: true,
-          messages: true,
-          ownerOf: true,
-          roles: true,
-          server: true,
-          user: true,
-          voiceChannel: true,
-        },
+        include: defaultInclude,
       });
       return user;
     }),
@@ -35,16 +39,7 @@ export const memberRouter = router({
           serverId: input.serverId,
           userId: input.userId,
         },
-        include: {
-          actionType: true,
-          mentionedIn: true,
-          messages: true,
-          ownerOf: true,
-          roles: true,
-          server: true,
-          user: true,
-          voiceChannel: true,
-        },
+        include: defaultInclude,
       });
       if (!member) throw new TRPCError({ code: "NOT_FOUND" });
       return member;
@@ -56,16 +51,7 @@ export const memberRouter = router({
         where: {
           serverId: input.id,
         },
-        include: {
-          actionType: true,
-          mentionedIn: true,
-          messages: true,
-          ownerOf: true,
-          roles: true,
-          server: true,
-          user: true,
-          voiceChannel: true,
-        },
+        include: defaultInclude,
       });
       return members;
     }),
@@ -104,15 +90,7 @@ export const memberRouter = router({
           banner: input.banner,
           pfp: input.pfp,
         },
-        include: {
-          roles: true,
-          mentionedIn: true,
-          messages: true,
-          user: true,
-          ownerOf: true,
-          server: true,
-          voiceChannel: true,
-        },
+        include: defaultInclude,
       });
       ee.emit("updateMember", member);
       return member;

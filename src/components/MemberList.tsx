@@ -31,8 +31,28 @@ const MemberList: FC<Props> = ({
     id: serverid,
   });
 
-  const { data: members } = trpc.members.getMembersByServerId.useQuery({
+  const { data: memberss } = trpc.members.getMembersByServerId.useQuery({
     id: serverid,
+  });
+
+  const [members, setMembers] = useState<Member[]>();
+
+  useEffect(() => {
+    setMembers(memberss);
+  }, []);
+
+  trpc.user.onUpdateUser.useSubscription(undefined, {
+    onData(user) {
+      (user.member ?? []).some(
+        (m) => server?.members.includes(m) && setMembers([m])
+      );
+      offlineMembers = [];
+      for (const m of members ?? [])
+        if (m.user.status === OnlineStatus.OFFLINE) offlineMembers.push(m.id);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+    },
   });
 
   for (const m of members ?? [])
@@ -98,6 +118,7 @@ const MemberList: FC<Props> = ({
                           listedMembers.push(m.id);
                           return (
                             <MemberComp
+                              userid={m.userId}
                               settings={server?.settings!}
                               badge={
                                 isOwner(m.userId, server)
@@ -144,6 +165,7 @@ const MemberList: FC<Props> = ({
                 !offlineMembers.includes(m.id) &&
                 usersOnline(server) && (
                   <MemberComp
+                    userid={m.userId}
                     settings={server.settings!}
                     badge={
                       isOwner(m.userId, server)
@@ -186,6 +208,7 @@ const MemberList: FC<Props> = ({
               return (
                 offlineMembers.includes(m.id) && (
                   <MemberComp
+                    userid={m.userId}
                     settings={server.settings!}
                     badge={
                       isOwner(m.userId, server)

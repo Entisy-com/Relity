@@ -3,7 +3,7 @@ import { getServerAuthSession } from "../server/common/get-server-auth-session";
 import styles from "../styles/pages/index.module.scss";
 import ServerList from "../components/ServerList";
 import Profile from "../components/Profile";
-import { Server, TextChannel, User } from "../types";
+import { FriendRequest, Server, TextChannel, User } from "../types";
 import FriendList from "../components/FriendList";
 import { useEffect, useState } from "react";
 import UserSettings from "../components/UserSettings";
@@ -12,6 +12,10 @@ import axios from "axios";
 import { HEARTBEAT_URL } from "../utils/constants";
 import { trpc } from "../utils/trpc";
 import { OnlineStatus } from "@prisma/client";
+import { requestToBodyStream } from "next/dist/server/body-streams";
+import MainComp from "../components/Main";
+import { Heart } from "../utils/heart";
+import { randexp } from "randexp";
 
 type Props = {
   user: User;
@@ -28,32 +32,18 @@ const Index: NextPage<Props> = ({ user }) => {
   const updateUser = trpc.user.updateUser.useMutation();
   const createSettings = trpc.user.createUserSettings.useMutation();
 
-  let inactive = false;
+  let active = true;
 
   useEffect(() => {
-    // #region UserSettings
     createSettings.mutate({
       userId: user.id,
     });
-    // #endregion UserSettings
 
-    // #region Heartbeat
-    axios.post(`${HEARTBEAT_URL}`, {
-      id: user.id,
-      inactive: inactive,
-    });
-
-    setInterval(() => {
-      axios.post(`${HEARTBEAT_URL}`, {
-        id: user.id,
-        inactive: inactive,
-      });
-    }, 5 * 1000);
-    // #endregion Heartbeat
+    Heart.startBeat(user.id, active);
   }, []);
 
   onInactive(2 * 60 * 1000, function () {
-    inactive = true;
+    active = false;
     updateUser.mutate({
       id: user.id,
       status: OnlineStatus.AWAY,
@@ -72,7 +62,7 @@ const Index: NextPage<Props> = ({ user }) => {
         document.onfocus =
           function () {
             clearTimeout(wait);
-            inactive = false;
+            active = true;
             wait = setTimeout(cb, ms);
           };
     }, []);
@@ -98,6 +88,9 @@ const Index: NextPage<Props> = ({ user }) => {
               setTextChannelOpen={setTextChannelOpen}
             />
           </>
+        )}
+        {!userSettingsOpen && !serverSettingsOpen && !serverOpen && (
+          <MainComp userid={user.id} />
         )}
         {userSettingsOpen ? (
           <UserSettings

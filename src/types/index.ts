@@ -3,6 +3,7 @@ import { Permission } from "@prisma/client";
 
 export type Server = Prisma.ServerGetPayload<{
   include: {
+    invites: true;
     settings: true;
     textchannel: true;
     bannedUser: true;
@@ -48,10 +49,31 @@ export type Server = Prisma.ServerGetPayload<{
 
 export type User = Prisma.UserGetPayload<{
   include: {
-    member: true;
+    member: {
+      include: {
+        actionType: true;
+        voiceChannel: true;
+        mentionedIn: true;
+        messages: true;
+        ownerOf: true;
+        roles: true;
+        server: true;
+        user: true;
+      };
+    };
     adminuser: true;
     bannedon: true;
-    friends: true;
+    friends: {
+      include: {
+        member: true;
+        adminuser: true;
+        friends: true;
+        bannedon: true;
+        friendsWith: true;
+        settings: true;
+        serverUserPosition: true;
+      };
+    };
     friendsWith: true;
     settings: true;
     serverUserPosition: true;
@@ -60,7 +82,18 @@ export type User = Prisma.UserGetPayload<{
 
 export type Role = Prisma.RoleGetPayload<{
   include: {
-    members: true;
+    members: {
+      include: {
+        actionType: true;
+        voiceChannel: true;
+        mentionedIn: true;
+        messages: true;
+        ownerOf: true;
+        roles: true;
+        server: true;
+        user: true;
+      };
+    };
     mentionedIn: true;
     server: true;
   };
@@ -174,3 +207,73 @@ export type ServerUserPosition = Prisma.ServerUserPositionGetPayload<{
     user: true;
   };
 }>;
+
+export type FriendRequest = Prisma.FriendRequestGetPayload<{
+  include: {
+    target: true;
+    sender: true;
+  };
+}>;
+
+export type Notification = Prisma.NotificationGetPayload<{
+  include: {
+    user: true;
+  };
+}>;
+
+export type Invite = Prisma.InviteGetPayload<{
+  include: {
+    server: true;
+  };
+}>;
+
+///////////////////////////////////////////////
+// DEFAULT INCLUDES
+///////////////////////////////////////////////
+
+export const defaultMemberInclude = Prisma.validator<Prisma.MemberInclude>()({
+  actionType: true,
+  voiceChannel: true,
+  mentionedIn: true,
+  messages: true,
+  ownerOf: true,
+  roles: {
+    include: {
+      members: true,
+      mentionedIn: true,
+      server: true,
+    },
+  },
+  server: true,
+  user: true,
+});
+
+export const defaultRoleInclude = Prisma.validator<Prisma.RoleInclude>()({
+  members: {
+    include: defaultMemberInclude,
+  },
+  mentionedIn: true,
+  server: true,
+});
+
+export const defaultUserInclude = Prisma.validator<Prisma.UserInclude>()({
+  member: {
+    include: defaultMemberInclude,
+  },
+  adminuser: true,
+  bannedon: true,
+  friends: {
+    include: {
+      member: true,
+      adminuser: true,
+      friends: true,
+      bannedon: true,
+      friendsWith: true,
+      settings: true,
+      serverUserPosition: true,
+    },
+  },
+  friendsWith: true,
+  settings: true,
+  serverUserPosition: true,
+});

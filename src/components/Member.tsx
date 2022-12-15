@@ -1,12 +1,15 @@
 import { OnlineStatus, ServerSettings } from "@prisma/client";
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import styles from "../styles/components/member.module.scss";
+import { User } from "../types";
+import { trpc } from "../utils/trpc";
 
 type Props = {
   name: string;
   status: OnlineStatus;
   image: string;
   color: string;
+  userid: string;
   onClick?: Function;
   onRightClick?: Function;
   badge: "owner" | "admin" | "none";
@@ -20,16 +23,36 @@ const MemberComp: FC<Props> = ({
   settings,
   badge,
   name,
+  userid,
   color,
   status,
   image,
 }) => {
+  const [user, setUser] = useState<User>();
+
+  const { data: userr } = trpc.user.getUserById.useQuery({
+    id: userid,
+  });
+
+  trpc.user.onUpdateUser.useSubscription(undefined, {
+    onData(user) {
+      user.id === userid && setUser(user);
+    },
+    onError(err) {
+      console.error("Subscription error:", err);
+    },
+  });
+
+  useEffect(() => {
+    setUser(userr!);
+  }, [userr]);
+
   function getStatusColor() {
-    return status === OnlineStatus.ONLINE
+    return user?.status === OnlineStatus.ONLINE
       ? "#66B025"
-      : status === OnlineStatus.AWAY
+      : user?.status === OnlineStatus.AWAY
       ? "#ffb20f"
-      : status === OnlineStatus.DND
+      : user?.status === OnlineStatus.DND
       ? "#C21D3C"
       : "transparent";
   }
@@ -44,6 +67,7 @@ const MemberComp: FC<Props> = ({
           : {}
       }
       className={styles.wrapper}
+      onClick={() => onClick && onClick()}
     >
       <img
         style={
@@ -61,9 +85,8 @@ const MemberComp: FC<Props> = ({
       />
       {status !== OnlineStatus.OFFLINE && (
         <>
-          <span className={styles.status} />
           <span
-            className={styles.status_inner}
+            className={styles.status}
             style={{
               background: getStatusColor(),
             }}

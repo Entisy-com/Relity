@@ -1,12 +1,25 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import EventEmitter from "events";
-import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
-import type { User, Member, Role } from "../../../types";
-import { OnlineStatus, Permission } from "@prisma/client";
+import { User, defaultUserInclude, defaultMemberInclude } from "../../../types";
+import { OnlineStatus, Prisma } from "@prisma/client";
 
 const ee = new EventEmitter();
+
+const defaultInclude = Prisma.validator<Prisma.UserInclude>()({
+  member: {
+    include: defaultMemberInclude,
+  },
+  adminuser: true,
+  bannedon: true,
+  friends: {
+    include: defaultUserInclude,
+  },
+  friendsWith: true,
+  settings: true,
+  serverUserPosition: true,
+});
 
 export const userRouter = router({
   createUserSettings: protectedProcedure
@@ -41,15 +54,7 @@ export const userRouter = router({
     .query(async ({ input, ctx }) => {
       const user = await ctx.prisma.user.findUnique({
         where: { id: input.id },
-        include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
-          settings: true,
-          bannedon: true,
-          friends: true,
-          friendsWith: true,
-        },
+        include: defaultInclude,
       });
       return user;
     }),
@@ -86,16 +91,7 @@ export const userRouter = router({
             },
           },
         },
-        include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
-          settings: true,
-          bannedon: true,
-          friends: true,
-          friendsWith: true,
-        },
-
+        include: defaultInclude,
         take: limit + 1,
         cursor: cursor
           ? {
@@ -110,10 +106,10 @@ export const userRouter = router({
       }
       return { friends, nextCursor };
     }),
-  searchUser: protectedProcedure
+  getUsers: protectedProcedure
     .input(
       z.object({
-        name: z.string(),
+        userid: z.string(),
         limit: z.number().min(1).max(100).nullish(),
         cursor: z.string().nullish(),
       })
@@ -122,30 +118,46 @@ export const userRouter = router({
       const limit = input.limit ?? 50;
       const { cursor } = input;
       const users = await ctx.prisma.user.findMany({
+        include: defaultInclude,
+        take: limit + 1,
+        where: {
+          id: input.userid,
+        },
+        cursor: cursor
+          ? {
+              id: cursor,
+            }
+          : undefined,
+      });
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (users.length > limit) {
+        const nextFriend = users.pop()!;
+        nextCursor = nextFriend.id;
+      }
+      return { users, nextCursor };
+    }),
+  searchUser: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().nullish(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input.limit ?? 50;
+      const { cursor } = input;
+      if (!(input.name.trim().length > 0))
+        return { users: [], id: input.id, nextCursor: undefined };
+      const users = await ctx.prisma.user.findMany({
         where: {
           name: {
-            contains: input.name,
+            mode: "insensitive",
+            contains: input.name.trim(),
           },
         },
-        include: {
-          adminuser: true,
-          bannedon: true,
-          friends: {
-            include: {
-              member: true,
-              adminuser: true,
-              bannedon: true,
-              friends: true,
-              friendsWith: true,
-              settings: true,
-              serverUserPosition: true,
-            },
-          },
-          friendsWith: true,
-          member: true,
-          serverUserPosition: true,
-          settings: true,
-        },
+        include: defaultInclude,
       });
       let nextCursor: typeof cursor | undefined = undefined;
       if (users.length > limit) {
@@ -153,7 +165,7 @@ export const userRouter = router({
         nextCursor = nextFriend.id;
       }
       ee.emit("searchUpdate", users);
-      return { users, nextCursor };
+      return { users, id: input.id, nextCursor };
     }),
   updateUser: protectedProcedure
     .input(
@@ -193,15 +205,7 @@ export const userRouter = router({
             },
           },
         },
-        include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
-          settings: true,
-          bannedon: true,
-          friends: true,
-          friendsWith: true,
-        },
+        include: defaultInclude,
       });
       // update self
       const user = await ctx.prisma.user.update({
@@ -215,17 +219,43 @@ export const userRouter = router({
             },
           },
         },
-        include: {
-          member: true,
-          serverUserPosition: true,
-          adminuser: true,
-          settings: true,
-          bannedon: true,
-          friends: true,
-          friendsWith: true,
-        },
+        include: defaultInclude,
       });
       ee.emit("addFriend", user, target);
+      return user.friends;
+    }),
+  removeFriend: protectedProcedure
+    .input(z.object({ target: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      // update target
+      const target = await ctx.prisma.user.update({
+        where: {
+          id: input.target,
+        },
+        data: {
+          friends: {
+            disconnect: {
+              id: ctx.session.user.id,
+            },
+          },
+        },
+        include: defaultInclude,
+      });
+      // update self
+      const user = await ctx.prisma.user.update({
+        where: {
+          id: ctx.session.user.id,
+        },
+        data: {
+          friends: {
+            disconnect: {
+              id: input.target,
+            },
+          },
+        },
+        include: defaultInclude,
+      });
+      ee.emit("removeFriend", user, target);
       return user.friends;
     }),
   updateSettings: protectedProcedure
@@ -265,8 +295,9 @@ export const userRouter = router({
     });
   }),
   onUserSearchUpdate: protectedProcedure.subscription(() => {
-    return observable<User[]>((emit) => {
-      const onSearchUpdate = (data: User[]) => emit.next(data);
+    return observable<{ users: User[]; id: string }>((emit) => {
+      const onSearchUpdate = (data: { users: User[]; id: string }) =>
+        emit.next(data);
       ee.on("searchUpdate", onSearchUpdate);
       return () => {
         ee.off("searchUpdate", onSearchUpdate);
@@ -279,6 +310,15 @@ export const userRouter = router({
       ee.on("addFriend", onAdd);
       return () => {
         ee.off("addFriend", onAdd);
+      };
+    });
+  }),
+  onFriendRemove: protectedProcedure.subscription(() => {
+    return observable<User[]>((emit) => {
+      const onRemove = (data: User[]) => emit.next(data);
+      ee.on("removeFriend", onRemove);
+      return () => {
+        ee.off("removeFriend", onRemove);
       };
     });
   }),

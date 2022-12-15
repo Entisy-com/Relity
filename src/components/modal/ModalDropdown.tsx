@@ -52,7 +52,7 @@ const ModalDropdown: FC<Props> = ({
                 option.label !== null && (
                   <button
                     className={styles.option_badge}
-                    key={option.label}
+                    key={option.value}
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();

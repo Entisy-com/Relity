@@ -1,5 +1,11 @@
 import { timeStamp } from "console";
-import { FC, MutableRefObject, useEffect, useState } from "react";
+import {
+  FC,
+  KeyboardEvent,
+  MutableRefObject,
+  useEffect,
+  useState,
+} from "react";
 import styles from "../../styles/components/modal.module.scss";
 
 type Props = {
@@ -10,7 +16,8 @@ type Props = {
   autoComplete?: boolean;
   focus?: boolean;
   clear?: boolean;
-  onKeyUp?: (key: string) => void;
+  onKeyUp?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onClear?: () => void;
 };
 
 const ModalInput: FC<Props> = ({
@@ -22,6 +29,7 @@ const ModalInput: FC<Props> = ({
   focus,
   clear,
   onKeyUp,
+  onClear,
 }) => {
   const [hidden, setHidden] = useState(true);
 
@@ -36,7 +44,7 @@ const ModalInput: FC<Props> = ({
         className={styles.input_field}
         type={type ? type : "text"}
         onKeyUp={(e) => {
-          if (onKeyUp) onKeyUp(e.key);
+          if (onKeyUp) onKeyUp(e);
         }}
       />
       {!password && clear && (
@@ -47,6 +55,7 @@ const ModalInput: FC<Props> = ({
             ) as HTMLInputElement;
             input.value = "";
             input.focus();
+            if (onClear) onClear();
           }}
           className={styles.clear_button}
           src="/cross.svg"

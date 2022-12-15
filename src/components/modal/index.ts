@@ -9,6 +9,7 @@ import ModalInput from "./ModalInput";
 import ModalList from "./ModalList";
 import ModalText from "./ModalText";
 import ModalTitle from "./ModalTitle";
+import ModalHistory from "./ModalHistory";
 
 export {
   Modal,
@@ -22,4 +23,5 @@ export {
   ModalList,
   ModalText,
   ModalTitle,
+  ModalHistory,
 };

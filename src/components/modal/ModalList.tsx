@@ -2,7 +2,7 @@ import { FC } from "react";
 import styles from "../../styles/components/modal.module.scss";
 
 type Item = {
-  label: string;
+  label: string | null;
   value: any;
 };
 
@@ -49,24 +49,27 @@ const ModalList: FC<Props> = ({
               {value}
             </p>
           )}
-          {items.map((i) => (
-            <li
-              style={
-                outline
-                  ? {
-                      border: "1px solid gray",
-                    }
-                  : {}
-              }
-              key={i.value}
-              className={styles.list_item}
-              onClick={(e) => {
-                if (clickable && onClick) onClick(e.button, i);
-              }}
-            >
-              {i.label}
-            </li>
-          ))}
+          {items.map(
+            (i) =>
+              i.label !== null && (
+                <li
+                  style={
+                    outline
+                      ? {
+                          border: "1px solid gray",
+                        }
+                      : {}
+                  }
+                  key={i.value}
+                  className={styles.list_item}
+                  onClick={(e) => {
+                    if (clickable && onClick) onClick(e.button, i);
+                  }}
+                >
+                  {i.label}
+                </li>
+              )
+          )}
         </ol>
       ) : (
         <ul
@@ -87,24 +90,27 @@ const ModalList: FC<Props> = ({
               {value}
             </p>
           )}
-          {items.map((i) => (
-            <li
-              style={
-                outline
-                  ? {
-                      border: "1px solid gray",
-                    }
-                  : {}
-              }
-              key={i.value}
-              className={styles.list_item}
-              onClick={(e) => {
-                if (clickable && onClick) onClick(e.button, i);
-              }}
-            >
-              {i.label}
-            </li>
-          ))}
+          {items.map(
+            (i) =>
+              i.label !== null && (
+                <li
+                  style={
+                    outline
+                      ? {
+                          border: "1px solid gray",
+                        }
+                      : {}
+                  }
+                  key={i.value}
+                  className={styles.list_item}
+                  onClick={(e) => {
+                    if (clickable && onClick) onClick(e.button, i);
+                  }}
+                >
+                  {i.label}
+                </li>
+              )
+          )}
         </ul>
       )}
     </>
